@@ -5,7 +5,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
   // Redirect to dashboard if already logged in
   if (authStore.checkAuth()) {
     if (authStore.isAdmin) {
-      return navigateTo("/admin/dashboard");
+      return navigateTo("/pos");
     } else {
       return navigateTo("/pos");
     }
