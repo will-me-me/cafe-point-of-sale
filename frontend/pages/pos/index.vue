@@ -125,6 +125,7 @@
           v-for="product in store.filteredProducts"
           :key="product.id"
           class="product-card"
+          @click="store.addToCart(product)"
         >
           <div class="product-image-wrapper">
             <v-img :src="product.image_url" class="product-image" cover>
