@@ -82,7 +82,7 @@
         v-if="authStore.isAuthenticated"
       >
         <v-app-bar-nav-icon @click="drawer = !drawer" />
-        <v-app-bar-title>Grounds Coffee POS</v-app-bar-title>
+        <v-app-bar-title>Babadeacon Cafe POS</v-app-bar-title>
         <v-spacer />
         <div class="user-info">
           <span class="user-role-badge">{{ authStore.userRole }}</span>
