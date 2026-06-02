@@ -295,7 +295,7 @@ const handleRegister = async () => {
   if (result.success) {
     showSuccess.value = true;
     setTimeout(() => {
-      navigateTo("/login");
+      navigateTo("/pos");
     }, 2000);
   } else {
     showError.value = true;
@@ -306,7 +306,7 @@ const handleRegister = async () => {
 onMounted(() => {
   if (authStore.checkAuth()) {
     if (authStore.isAdmin) {
-      navigateTo("/admin/dashboard");
+      navigateTo("/pos");
     } else {
       navigateTo("/pos");
     }
