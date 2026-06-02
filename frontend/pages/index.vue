@@ -11,9 +11,9 @@
 
       <!-- Logo Section -->
       <div class="logo-section">
-        <div class="logo-icon">🌱</div>
-        <div class="logo-text">GROUNDS</div>
-        <div class="logo-badge">COFFEE</div>
+        <div class="logo-icon">🍕</div>
+        <div class="logo-text">BABADEACON</div>
+        <div class="logo-badge">CAFE</div>
       </div>
 
       <!-- Title -->
@@ -199,7 +199,7 @@ const handleLogin = async () => {
   if (result.success) {
     // Redirect based on role
     if (authStore.isAdmin) {
-      await navigateTo("/admin/dashboard");
+      await navigateTo("/pos");
     } else {
       await navigateTo("/pos");
     }
