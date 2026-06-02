@@ -18,7 +18,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
     }
     if (requiredRole === "cashier" && !authStore.isCashier) {
       // Redirect admins to dashboard if they try to access cashier routes
-      return navigateTo("/admin/dashboard");
+      return navigateTo("/pos");
     }
   }
 });
