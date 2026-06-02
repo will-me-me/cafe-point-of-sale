@@ -48,11 +48,14 @@ export const useAuthStore = defineStore("auth", () => {
         method: "POST",
         body: credentials,
       });
-      user.value = response.user;
-      token.value = response.token;
-      localStorage.setItem("auth_token", token.value);
-      localStorage.setItem("user", JSON.stringify(response.user));
-      return { success: true, user: response.user };
+      // don't mock response, use actual response from backend
+      const { user: loggedInUser, token: authToken } = response;
+      user.value = loggedInUser;
+
+      token.value = authToken;
+      localStorage.setItem("auth_token", authToken);
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
+      return { success: true, user: loggedInUser };
     } catch (err: any) {
       error.value = err.message || "Login failed";
       return { success: false, error: error.value };
@@ -67,25 +70,19 @@ export const useAuthStore = defineStore("auth", () => {
 
     try {
       // Simulate API call - Replace with your actual backend
-      const response = await $fetch("/auth/register", {
+      const response = await $fetch("http://127.0.0.1:8000/auth/register", {
         method: "POST",
         body: data,
       });
 
-      // Mock response for demo
-      const newUser = {
-        id: Date.now().toString(),
-        name: data.name,
-        email: data.email,
-        role: data.role,
-      };
+      // don't mock response, use actual response from backend
+      const { user: registeredUser, token: authToken } = response;
+      user.value = registeredUser;
 
-      user.value = newUser;
-      token.value = "mock-token-" + Date.now();
-      localStorage.setItem("auth_token", token.value);
-      localStorage.setItem("user", JSON.stringify(newUser));
-
-      return { success: true, user: newUser };
+      token.value = authToken;
+      localStorage.setItem("auth_token", authToken);
+      localStorage.setItem("user", JSON.stringify(registeredUser));
+      return { success: true, user: registeredUser };
     } catch (err: any) {
       error.value = err.message || "Registration failed";
       return { success: false, error: error.value };
@@ -108,7 +105,7 @@ export const useAuthStore = defineStore("auth", () => {
       error.value = null;
 
       // Navigate to login
-      await navigateTo("/login");
+      await navigateTo("/");
     } catch (err: any) {
       error.value = err.message || "Logout failed";
     } finally {
