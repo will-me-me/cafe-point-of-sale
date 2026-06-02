@@ -1,5 +1,5 @@
 <template>
-  <div class="content-wrapper">
+  <div class="pos-container">
     <!-- Left Section -->
     <div class="left-section">
       <div class="header" v-if="headerLoading">
@@ -10,8 +10,8 @@
       <!-- Header -->
       <div class="header" v-else>
         <div class="logo-section">
-          <div class="logo-icon">🌱</div>
-          <div class="logo-text">GROUNDS</div>
+          <div class="logo-icon">🍔</div>
+          <div class="logo-text">BABADEACON</div>
           <div class="logo-badge">COFFEE</div>
         </div>
         <div class="header-right">
@@ -47,16 +47,6 @@
             <v-btn v-else icon variant="text" size="small" class="cart-btn">
               <v-icon size="22">mdi-cart-outline</v-icon>
             </v-btn>
-          </div>
-
-          <div class="user-info">
-            <v-avatar color="#1B4332" size="40" class="user-avatar">
-              <span class="avatar-initials">SW</span>
-            </v-avatar>
-            <div class="user-details">
-              <div class="user-name">Samantha W.</div>
-              <div class="user-role">Cashier</div>
-            </div>
           </div>
         </div>
       </div>
@@ -295,7 +285,7 @@
               </div>
             </div>
             <div class="item-price">
-              ${{ (item.price * item.quantity).toFixed(2) }}
+              ${{ (item.unitPrice * item.quantity).toFixed(2) }}
             </div>
             <div class="item-quantity">
               <v-btn
@@ -373,7 +363,7 @@
       app
       @click="dialog = true"
       class="fab-add-product"
-      v-if="isAdmin"
+      v-if="authStore.isAdmin"
     />
 
     <!-- Add Product Dialog -->
@@ -466,11 +456,18 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
 import { usePosStore } from "~/stores/pos";
+import { useAuthStore } from "~/stores/auth";
 
+definePageMeta({
+  layout: "default",
+  middleware: "auth",
+});
+
+const authStore = useAuthStore();
 const store = usePosStore();
 const searchQuery = ref("");
 const orderType = ref("dine-in");
-const customerName = ref("Muadz");
+const customerName = ref("");
 const tableNumber = ref("Table B12");
 const receiptNumber = ref("");
 const TodaysTotalOrders = ref(0);
@@ -478,7 +475,6 @@ const loading = ref(true);
 const rightSectionLoading = ref(true);
 const headerLoading = ref(true);
 const searchLoading = ref(true);
-const isAdmin = ref(true); // Set based on user role from auth
 
 const dialog = ref(false);
 const isValid = ref(false);
@@ -525,12 +521,17 @@ const today = new Date().toLocaleDateString(undefined, {
   month: "short",
 });
 
+// Set customer name from auth user if available
+if (authStore.user) {
+  customerName.value = authStore.user.name;
+}
+
 const placeOrder = async () => {
   if (store.hasCartItems) {
     const orderData = {
       receiptNumber: receiptNumber.value,
       orderType: orderType.value,
-      customerName: customerName.value,
+      customerName: customerName.value || authStore.user?.name || "Guest",
       tableNumber: tableNumber.value,
       items: store.cartItems,
       subtotal: store.subtotal,
@@ -618,7 +619,14 @@ const submitProduct = async () => {
   }
 };
 
+// Check authentication before loading
 onMounted(async () => {
+  // Redirect if not authenticated
+  if (!authStore.checkAuth()) {
+    await navigateTo("/login");
+    return;
+  }
+
   try {
     loading.value = true;
     headerLoading.value = true;
@@ -651,19 +659,11 @@ onMounted(async () => {
 });
 </script>
 
-<style>
-@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap");
-
-* {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-}
-</style>
-
 <style scoped>
-.content-wrapper {
+.pos-container {
   display: flex;
   gap: 0;
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
   background: #f8f6f2;
 }
 
@@ -786,42 +786,6 @@ onMounted(async () => {
 .cart-btn {
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 4px 12px 4px 4px;
-  background: white;
-  border-radius: 40px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.user-avatar {
-  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%);
-}
-
-.avatar-initials {
-  font-size: 14px;
-  font-weight: 600;
-  color: white;
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1b4332;
-}
-
-.user-role {
-  font-size: 11px;
-  color: #999;
 }
 
 /* Search Section */
@@ -1415,7 +1379,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 900px) {
-  .content-wrapper {
+  .pos-container {
     flex-direction: column;
   }
 
