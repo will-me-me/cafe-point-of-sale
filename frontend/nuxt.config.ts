@@ -18,8 +18,9 @@ export default defineNuxtConfig({
     },
   },
   build: {
-    transpile: ["vuetify"],
+    transpile: ["vuetify", "chart.js", "vue-chartjs"],
   },
+  plugins: [{ src: "~/plugins/chart.client.ts", mode: "client" }],
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
 });
