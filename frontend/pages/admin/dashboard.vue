@@ -28,16 +28,70 @@
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div class="stat-card" v-for="stat in stats" :key="stat.title">
-        <div class="stat-icon-wrapper" :style="{ background: stat.gradient }">
-          <v-icon class="stat-icon" size="28">{{ stat.icon }}</v-icon>
+      <div class="stat-card">
+        <div
+          class="stat-icon-wrapper"
+          style="background: linear-gradient(135deg, #2d6a4f, #1b4332)"
+        >
+          <v-icon class="stat-icon" size="28">mdi-currency-usd</v-icon>
         </div>
         <div class="stat-content">
-          <div class="stat-value">{{ stat.value }}</div>
-          <div class="stat-title">{{ stat.title }}</div>
-          <div class="stat-change" :class="stat.changeType">
-            <v-icon size="14">{{ stat.changeIcon }}</v-icon>
-            <span>{{ stat.change }} from yesterday</span>
+          <div class="stat-value">ksh{{ totalRevenue.toLocaleString() }}</div>
+          <div class="stat-title">Total Revenue</div>
+          <div class="stat-change" :class="revenueChangeClass">
+            <v-icon size="14">{{ revenueChangeIcon }}</v-icon>
+            <span>{{ revenueChangePercent }} from yesterday</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div
+          class="stat-icon-wrapper"
+          style="background: linear-gradient(135deg, #e07a5f, #d66b4a)"
+        >
+          <v-icon class="stat-icon" size="28">mdi-cart-outline</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ totalOrders }}</div>
+          <div class="stat-title">Total Orders</div>
+          <div class="stat-change" :class="ordersChangeClass">
+            <v-icon size="14">{{ ordersChangeIcon }}</v-icon>
+            <span>{{ ordersChangePercent }} from yesterday</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div
+          class="stat-icon-wrapper"
+          style="background: linear-gradient(135deg, #f4a261, #e9c46a)"
+        >
+          <v-icon class="stat-icon" size="28">mdi-chart-line</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">ksh{{ averageOrderValue.toFixed(2) }}</div>
+          <div class="stat-title">Average Order</div>
+          <div class="stat-change" :class="avgOrderChangeClass">
+            <v-icon size="14">{{ avgOrderChangeIcon }}</v-icon>
+            <span>{{ avgOrderChangePercent }} from yesterday</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div
+          class="stat-icon-wrapper"
+          style="background: linear-gradient(135deg, #6b4e71, #4a3b52)"
+        >
+          <v-icon class="stat-icon" size="28">mdi-coffee</v-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ totalItemsSold }}</div>
+          <div class="stat-title">Items Sold</div>
+          <div class="stat-change" :class="itemsChangeClass">
+            <v-icon size="14">{{ itemsChangeIcon }}</v-icon>
+            <span>{{ itemsChangePercent }} from yesterday</span>
           </div>
         </div>
       </div>
@@ -57,10 +111,12 @@
             variant="outlined"
             density="compact"
             class="period-select"
+            @update:model-value="updateRevenueChart"
           />
         </div>
         <div class="chart-container">
-          <canvas ref="revenueChart"></canvas>
+          <!-- <revenue-chart :data="getRevenueChartData()" /> -->
+          <canvas ref="revenueChartCanvas"></canvas>
         </div>
       </v-card>
 
@@ -74,7 +130,7 @@
         </div>
         <div class="popular-items">
           <div
-            v-for="item in popularItems"
+            v-for="item in topProducts"
             :key="item.name"
             class="popular-item"
           >
@@ -84,8 +140,10 @@
               <div class="item-category">{{ item.category }}</div>
             </div>
             <div class="item-stats">
-              <div class="item-sales">{{ item.sales }} sold</div>
-              <div class="item-revenue">${{ item.revenue }}</div>
+              <div class="item-sales">{{ item.quantity }} sold</div>
+              <div class="item-revenue">
+                ksh{{ item.revenue.toLocaleString() }}
+              </div>
             </div>
             <div class="item-progress">
               <div
@@ -112,9 +170,13 @@
           </v-btn>
         </div>
         <div class="orders-list">
-          <div v-for="order in recentOrders" :key="order.id" class="order-row">
+          <div
+            v-for="order in recentOrdersData"
+            :key="order.id"
+            class="order-row"
+          >
             <div class="order-info">
-              <div class="order-receipt">{{ order.receiptNumber }}</div>
+              <div class="order-receipt">#{{ order.receiptNumber }}</div>
               <div class="order-meta">
                 <span class="order-time">{{ order.time }}</span>
                 <span class="order-type-badge" :class="order.orderType">
@@ -123,7 +185,9 @@
               </div>
             </div>
             <div class="order-customer">{{ order.customerName }}</div>
-            <div class="order-amount">${{ order.total }}</div>
+            <div class="order-amount">
+              ksh{{ order.total.toLocaleString() }}
+            </div>
             <v-chip
               :color="order.status === 'completed' ? '#2D6A4F' : '#E07A5F'"
               size="small"
@@ -144,7 +208,7 @@
         </div>
         <div class="activity-timeline">
           <div
-            v-for="activity in activities"
+            v-for="activity in recentActivities"
             :key="activity.id"
             class="activity-item"
           >
@@ -209,9 +273,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "~/stores/auth";
-// import Chart from "chart.js/auto";
+import { usePosStore } from "~/stores/pos";
+import Chart from "chart.js/auto";
+import RevenueChart from "~/components/charts/RevenueChart.vue";
 
 definePageMeta({
   layout: "default",
@@ -219,164 +285,332 @@ definePageMeta({
 });
 
 const authStore = useAuthStore();
+const store = usePosStore();
 const revenuePeriod = ref("7 days");
-const revenueChart = ref(null);
+let revenueChartInstance: Chart | null = null;
+const revenueChartCanvas = ref<HTMLCanvasElement | null>(null);
 
-// Stats data
-const stats = ref([
-  {
-    title: "Total Revenue",
-    value: "$12,426",
-    icon: "mdi-currency-usd",
-    gradient: "linear-gradient(135deg, #2D6A4F, #1B4332)",
-    change: "+12.5%",
-    changeType: "positive",
-    changeIcon: "mdi-arrow-up",
-  },
-  {
-    title: "Total Orders",
-    value: "1,234",
-    icon: "mdi-cart-outline",
-    gradient: "linear-gradient(135deg, #E07A5F, #D66B4A)",
-    change: "+8.2%",
-    changeType: "positive",
-    changeIcon: "mdi-arrow-up",
-  },
-  {
-    title: "Average Order",
-    value: "$45.20",
-    icon: "mdi-chart-line",
-    gradient: "linear-gradient(135deg, #F4A261, #E9C46A)",
-    change: "-2.4%",
-    changeType: "negative",
-    changeIcon: "mdi-arrow-down",
-  },
-  {
-    title: "Active Users",
-    value: "24",
-    icon: "mdi-account-group",
-    gradient: "linear-gradient(135deg, #6B4E71, #4A3B52)",
-    change: "+5%",
-    changeType: "positive",
-    changeIcon: "mdi-arrow-up",
-  },
-]);
+// Get all orders from store
+const allOrders = computed(() => store.AllOrders || []);
 
-// Popular items
-const popularItems = ref([
-  {
-    rank: 1,
-    name: "Caramel Macchiato",
-    category: "Coffee",
-    sales: 234,
-    revenue: 936,
-    percentage: 100,
-  },
-  {
-    rank: 2,
-    name: "Croissant",
-    category: "Snack",
-    sales: 198,
-    revenue: 693,
-    percentage: 85,
-  },
-  {
-    rank: 3,
-    name: "Matcha Latte",
-    category: "Tea",
-    sales: 167,
-    revenue: 751,
-    percentage: 71,
-  },
-  {
-    rank: 4,
-    name: "Blueberry Muffin",
-    category: "Snack",
-    sales: 145,
-    revenue: 435,
-    percentage: 62,
-  },
-  {
-    rank: 5,
-    name: "Iced Americano",
-    category: "Coffee",
-    sales: 128,
-    revenue: 512,
-    percentage: 55,
-  },
-]);
+// Today's date
+const today = new Date().toISOString().split("T")[0];
+const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
 
-// Recent orders
-const recentOrders = ref([
-  {
-    id: 1,
-    receiptNumber: "#RCP-12345",
-    time: "2 min ago",
-    customerName: "John Smith",
-    orderType: "dine-in",
-    total: 42.5,
-    status: "completed",
-  },
-  {
-    id: 2,
-    receiptNumber: "#RCP-12346",
-    time: "15 min ago",
-    customerName: "Emma Wilson",
-    orderType: "take-away",
-    total: 28.75,
-    status: "completed",
-  },
-  {
-    id: 3,
-    receiptNumber: "#RCP-12347",
-    time: "32 min ago",
-    customerName: "Michael Brown",
-    orderType: "online",
-    total: 53.2,
-    status: "preparing",
-  },
-  {
-    id: 4,
-    receiptNumber: "#RCP-12348",
-    time: "1 hour ago",
-    customerName: "Sarah Johnson",
-    orderType: "dine-in",
-    total: 34.9,
-    status: "completed",
-  },
-]);
+// Filter orders for today
+const todayOrders = computed(() => {
+  return allOrders.value.filter((order) => {
+    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    return orderDate === today;
+  });
+});
 
-// Activities
-const activities = ref([
-  {
-    id: 1,
-    text: "New order #RCP-12345 placed",
-    time: "2 min ago",
-    icon: "mdi-cart-plus",
-    color: "#2D6A4F",
-  },
-  {
-    id: 2,
-    text: 'Product "Caramel Macchiato" added',
-    time: "15 min ago",
-    icon: "mdi-coffee",
-    color: "#E07A5F",
-  },
-  {
-    id: 3,
-    text: "Cashier Sarah logged in",
-    time: "32 min ago",
-    icon: "mdi-account-check",
-    color: "#F4A261",
-  },
-  {
-    id: 4,
-    text: "Daily sales report generated",
-    time: "1 hour ago",
-    icon: "mdi-chart-line",
-    color: "#6B4E71",
-  },
-]);
+// Filter orders for yesterday
+const yesterdayOrders = computed(() => {
+  return allOrders.value.filter((order) => {
+    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    return orderDate === yesterday;
+  });
+});
+
+// Total Revenue
+const totalRevenue = computed(() => {
+  return allOrders.value.reduce((sum, order) => sum + (order.total || 0), 0);
+});
+
+const todayRevenue = computed(() => {
+  return todayOrders.value.reduce((sum, order) => sum + (order.total || 0), 0);
+});
+
+const yesterdayRevenue = computed(() => {
+  return yesterdayOrders.value.reduce(
+    (sum, order) => sum + (order.total || 0),
+    0
+  );
+});
+
+// Total Orders
+const totalOrders = computed(() => allOrders.value.length);
+
+const todayOrderCount = computed(() => todayOrders.value.length);
+const yesterdayOrderCount = computed(() => yesterdayOrders.value.length);
+
+// Average Order Value
+const averageOrderValue = computed(() => {
+  if (totalOrders.value === 0) return 0;
+  return totalRevenue.value / totalOrders.value;
+});
+
+const todayAvgOrder = computed(() => {
+  if (todayOrderCount.value === 0) return 0;
+  return todayRevenue.value / todayOrderCount.value;
+});
+
+const yesterdayAvgOrder = computed(() => {
+  if (yesterdayOrderCount.value === 0) return 0;
+  return yesterdayRevenue.value / yesterdayOrderCount.value;
+});
+
+// Total Items Sold
+const totalItemsSold = computed(() => {
+  return allOrders.value.reduce((sum, order) => {
+    const items = order.items || [];
+    return (
+      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
+    );
+  }, 0);
+});
+
+const todayItemsSold = computed(() => {
+  return todayOrders.value.reduce((sum, order) => {
+    const items = order.items || [];
+    return (
+      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
+    );
+  }, 0);
+});
+
+const yesterdayItemsSold = computed(() => {
+  return yesterdayOrders.value.reduce((sum, order) => {
+    const items = order.items || [];
+    return (
+      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
+    );
+  }, 0);
+});
+
+// Calculate percentage changes
+const calculateChange = (current: number, previous: number) => {
+  if (previous === 0) return { percent: "+100%", isPositive: true };
+  const percent = ((current - previous) / previous) * 100;
+  return {
+    percent: `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`,
+    isPositive: percent >= 0,
+  };
+};
+
+const revenueChange = computed(() =>
+  calculateChange(todayRevenue.value, yesterdayRevenue.value)
+);
+const ordersChange = computed(() =>
+  calculateChange(todayOrderCount.value, yesterdayOrderCount.value)
+);
+const avgOrderChange = computed(() =>
+  calculateChange(todayAvgOrder.value, yesterdayAvgOrder.value)
+);
+const itemsChange = computed(() =>
+  calculateChange(todayItemsSold.value, yesterdayItemsSold.value)
+);
+
+const revenueChangeClass = computed(() =>
+  revenueChange.value.isPositive ? "positive" : "negative"
+);
+const revenueChangeIcon = computed(() =>
+  revenueChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const revenueChangePercent = computed(() => revenueChange.value.percent);
+
+const ordersChangeClass = computed(() =>
+  ordersChange.value.isPositive ? "positive" : "negative"
+);
+const ordersChangeIcon = computed(() =>
+  ordersChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const ordersChangePercent = computed(() => ordersChange.value.percent);
+
+const avgOrderChangeClass = computed(() =>
+  avgOrderChange.value.isPositive ? "positive" : "negative"
+);
+const avgOrderChangeIcon = computed(() =>
+  avgOrderChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const avgOrderChangePercent = computed(() => avgOrderChange.value.percent);
+
+const itemsChangeClass = computed(() =>
+  itemsChange.value.isPositive ? "positive" : "negative"
+);
+const itemsChangeIcon = computed(() =>
+  itemsChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const itemsChangePercent = computed(() => itemsChange.value.percent);
+
+// Top Products
+const topProducts = computed(() => {
+  const productMap = new Map();
+
+  allOrders.value.forEach((order) => {
+    const items = order.items || [];
+    items.forEach((item) => {
+      const key = item.name;
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          name: item.name,
+          category: item.category || "Unknown",
+          quantity: 0,
+          revenue: 0,
+        });
+      }
+      const product = productMap.get(key);
+      product.quantity += item.quantity || 0;
+      product.revenue +=
+        (item.unitPrice || item.price || 0) * (item.quantity || 0);
+    });
+  });
+
+  const products = Array.from(productMap.values());
+  const maxRevenue = Math.max(...products.map((p) => p.revenue), 1);
+
+  return products
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5)
+    .map((p, index) => ({
+      ...p,
+      rank: index + 1,
+      percentage: (p.revenue / maxRevenue) * 100,
+    }));
+});
+
+// Recent Orders
+const recentOrdersData = computed(() => {
+  return allOrders.value
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    .slice(0, 5)
+    .map((order: any) => ({
+      id: order._id,
+      receiptNumber: order.receiptNumber,
+      time: new Date(order.created_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      orderType: order.orderType,
+      customerName: order.customerName,
+      total: order.total,
+      status: "completed",
+    }));
+});
+
+// Revenue Chart Data
+const getRevenueChartData = () => {
+  let days = 7;
+  if (revenuePeriod.value === "30 days") days = 30;
+  if (revenuePeriod.value === "90 days") days = 90;
+
+  const revenueMap = new Map();
+  const today = new Date();
+
+  // Initialize last 'days' days with zero
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    revenueMap.set(dateStr, 0);
+  }
+
+  // Aggregate revenue by date
+  allOrders.value.forEach((order) => {
+    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    if (revenueMap.has(orderDate)) {
+      revenueMap.set(orderDate, revenueMap.get(orderDate) + (order.total || 0));
+    }
+  });
+
+  const labels = Array.from(revenueMap.keys()).map((date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  });
+
+  const data = Array.from(revenueMap.values());
+
+  return { labels, data };
+};
+
+const updateRevenueChart = () => {
+  if (revenueChartInstance) {
+    revenueChartInstance.destroy();
+  }
+
+  const ctx = revenueChartCanvas.value?.getContext("2d");
+  if (!ctx) return;
+
+  const { labels, data } = getRevenueChartData();
+
+  revenueChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "Revenue",
+          data: data,
+          borderColor: "#2D6A4F",
+          backgroundColor: "rgba(45, 106, 79, 0.1)",
+          tension: 0.4,
+          fill: true,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              return `Revenue: ksh${context.raw.toLocaleString()}`;
+            },
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => "ksh" + value.toLocaleString(),
+          },
+        },
+      },
+    },
+  });
+};
+
+// Recent Activities (based on actual orders)
+const recentActivities = computed(() => {
+  const activities = [];
+
+  // Add order activities
+  allOrders.value.slice(0, 5).forEach((order, index) => {
+    const time = new Date(order.created_at);
+    const now = new Date();
+    const diffMs = now.getTime() - time.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+
+    let timeAgo = "";
+    if (diffMins < 1) timeAgo = "Just now";
+    else if (diffMins < 60) timeAgo = `${diffMins} min ago`;
+    else if (diffHours < 24)
+      timeAgo = `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    else timeAgo = time.toLocaleDateString();
+
+    activities.push({
+      id: `order-${order._id}`,
+      text: `New order #${order.receiptNumber} placed by ${order.customerName}`,
+      time: timeAgo,
+      icon: "mdi-cart-plus",
+      color: "#2D6A4F",
+    });
+  });
+
+  return activities.slice(0, 4);
+});
 
 // Date formatting
 const currentDate = new Date().toLocaleDateString("en-US", {
@@ -389,38 +623,17 @@ const currentFullDate = new Date().toLocaleDateString("en-US", {
 });
 
 // Chart initialization
-onMounted(() => {
-  const ctx = document.getElementById("revenueChart")?.getContext("2d");
-  if (ctx) {
-    new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        datasets: [
-          {
-            label: "Revenue",
-            data: [1250, 1420, 1380, 1650, 1890, 2100, 1950],
-            borderColor: "#2D6A4F",
-            backgroundColor: "rgba(45, 106, 79, 0.1)",
-            tension: 0.4,
-            fill: true,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-      },
-    });
-  }
+const initRevenueChart = () => {
+  updateRevenueChart();
+};
+
+// Watch for revenue period changes
+watch(revenuePeriod, () => {
+  updateRevenueChart();
 });
 
 // Actions
 const openAddProduct = () => {
-  // Open add product dialog or navigate
   navigateTo("/admin/products");
 };
 
@@ -435,9 +648,17 @@ const generateReport = () => {
 const manageUsers = () => {
   navigateTo("/admin/users");
 };
+
+// Load data on mount
+onMounted(async () => {
+  await store.getAllOrders();
+  await store.getAllProducts();
+  initRevenueChart();
+});
 </script>
 
 <style scoped>
+/* All existing styles remain the same */
 .dashboard-container {
   padding: 32px;
   background: #f8f6f2;
