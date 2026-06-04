@@ -62,20 +62,75 @@
     <div v-else>
       <!-- Key Metrics -->
       <div class="metrics-grid">
-        <div class="metric-card" v-for="metric in metrics" :key="metric.title">
+        <div class="metric-card">
           <div class="metric-header">
-            <div class="metric-icon" :style="{ background: metric.gradient }">
-              <v-icon size="24" color="white">{{ metric.icon }}</v-icon>
+            <div
+              class="metric-icon"
+              style="background: linear-gradient(135deg, #2d6a4f, #1b4332)"
+            >
+              <v-icon size="24" color="white">mdi-currency-usd</v-icon>
             </div>
-            <div class="metric-trend" :class="metric.trend">
-              <v-icon size="16">{{
-                metric.trend === "up" ? "mdi-arrow-up" : "mdi-arrow-down"
-              }}</v-icon>
-              <span>{{ metric.trendValue }}</span>
+            <div class="metric-trend" :class="revenueTrendClass">
+              <v-icon size="16">{{ revenueTrendIcon }}</v-icon>
+              <span>{{ revenueTrendValue }}</span>
             </div>
           </div>
-          <div class="metric-value">{{ metric.value }}</div>
-          <div class="metric-title">{{ metric.title }}</div>
+          <div class="metric-value">ksh{{ totalRevenue.toLocaleString() }}</div>
+          <div class="metric-title">Total Revenue</div>
+          <div class="metric-subtitle">vs previous period</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div
+              class="metric-icon"
+              style="background: linear-gradient(135deg, #e07a5f, #d66b4a)"
+            >
+              <v-icon size="24" color="white">mdi-cart-outline</v-icon>
+            </div>
+            <div class="metric-trend" :class="ordersTrendClass">
+              <v-icon size="16">{{ ordersTrendIcon }}</v-icon>
+              <span>{{ ordersTrendValue }}</span>
+            </div>
+          </div>
+          <div class="metric-value">{{ totalOrders }}</div>
+          <div class="metric-title">Total Orders</div>
+          <div class="metric-subtitle">vs previous period</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div
+              class="metric-icon"
+              style="background: linear-gradient(135deg, #f4a261, #e9c46a)"
+            >
+              <v-icon size="24" color="white">mdi-chart-line</v-icon>
+            </div>
+            <div class="metric-trend" :class="avgOrderTrendClass">
+              <v-icon size="16">{{ avgOrderTrendIcon }}</v-icon>
+              <span>{{ avgOrderTrendValue }}</span>
+            </div>
+          </div>
+          <div class="metric-value">ksh{{ averageOrderValue.toFixed(2) }}</div>
+          <div class="metric-title">Average Order</div>
+          <div class="metric-subtitle">vs previous period</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div
+              class="metric-icon"
+              style="background: linear-gradient(135deg, #6b4e71, #4a3b52)"
+            >
+              <v-icon size="24" color="white">mdi-coffee</v-icon>
+            </div>
+            <div class="metric-trend" :class="itemsTrendClass">
+              <v-icon size="16">{{ itemsTrendIcon }}</v-icon>
+              <span>{{ itemsTrendValue }}</span>
+            </div>
+          </div>
+          <div class="metric-value">{{ totalItemsSold }}</div>
+          <div class="metric-title">Items Sold</div>
           <div class="metric-subtitle">vs previous period</div>
         </div>
       </div>
@@ -84,11 +139,11 @@
       <div class="chart-row">
         <v-card class="chart-card" elevation="0">
           <div class="chart-header">
-            <div>
+            <!-- <div>
               <div class="chart-title">Revenue Overview</div>
               <div class="chart-subtitle">Daily revenue trend</div>
-            </div>
-            <div class="chart-controls">
+            </div> -->
+            <!-- <div class="chart-controls">
               <button
                 v-for="chartType in chartTypes"
                 :key="chartType.value"
@@ -100,10 +155,14 @@
               >
                 {{ chartType.label }}
               </button>
-            </div>
+            </div> -->
           </div>
-          <div class="chart-container">
-            <canvas ref="revenueChart"></canvas>
+          <div class="chart-container" style="height: 420px">
+            <RevenueChart
+              :data="dailyRevenueData"
+              :labels="dailyRevenueLabels"
+              :type="selectedChartType"
+            />
           </div>
         </v-card>
       </div>
@@ -125,7 +184,10 @@
           </div>
           <div class="products-list">
             <div
-              v-for="(product, index) in topProducts"
+              v-for="(product, index) in topProductsData.slice(
+                0,
+                topProductsLimit
+              )"
               :key="product.name"
               class="product-row"
             >
@@ -140,7 +202,9 @@
               </div>
               <div class="product-stats">
                 <div class="product-quantity">{{ product.quantity }} sold</div>
-                <div class="product-revenue">${{ product.revenue }}</div>
+                <div class="product-revenue">
+                  ksh {{ product.revenue.toLocaleString() }}
+                </div>
               </div>
               <div class="product-progress">
                 <div
@@ -163,12 +227,24 @@
               <div class="card-subtitle">Revenue distribution</div>
             </div>
           </div>
-          <div class="distribution-container">
-            <canvas ref="distributionChart"></canvas>
+          <div
+            class="distribution-container"
+            style="height: 600px; border-radius: 16px"
+          >
+            <ClientOnly>
+              <DoughnutChart
+                :data="categoryStatsData.map((c) => c.revenue)"
+                :labels="categoryStatsData.map((c) => c.name)"
+                :colors="categoryStatsData.map((c) => c.color)"
+              />
+            </ClientOnly>
           </div>
-          <div class="category-legend">
+          <div
+            class="category-legend"
+            style="padding-top: 16px; margin-top: 16px"
+          >
             <div
-              v-for="category in categoryStats"
+              v-for="category in categoryStatsData"
               :key="category.name"
               class="legend-item"
             >
@@ -178,7 +254,9 @@
               ></div>
               <div class="legend-name">{{ category.name }}</div>
               <div class="legend-value">{{ category.percentage }}%</div>
-              <div class="legend-amount">${{ category.revenue }}</div>
+              <div class="legend-amount">
+                ksh {{ category.revenue.toLocaleString() }}
+              </div>
             </div>
           </div>
         </v-card>
@@ -196,7 +274,7 @@
           </div>
           <div class="hourly-bars">
             <div
-              v-for="hour in hourlySales"
+              v-for="hour in hourlySalesData"
               :key="hour.hour"
               class="hour-bar-wrapper"
             >
@@ -207,7 +285,7 @@
                   background: getHourColor(hour.percentage),
                 }"
               >
-                <span class="hour-value">${{ hour.revenue }}</span>
+                <span class="hour-value">ksh{{ hour.revenue }}</span>
               </div>
               <div class="hour-label">{{ hour.hour }}</div>
             </div>
@@ -224,7 +302,7 @@
           </div>
           <div class="ordertype-stats">
             <div
-              v-for="type in orderTypeStats"
+              v-for="type in orderTypeStatsData"
               :key="type.name"
               class="ordertype-item"
             >
@@ -246,7 +324,7 @@
               </div>
               <div class="ordertype-details">
                 <span>{{ type.count }} orders</span>
-                <span>${{ type.revenue }}</span>
+                <span>ksh {{ type.revenue.toLocaleString() }}</span>
               </div>
             </div>
           </div>
@@ -295,8 +373,10 @@
               <tr v-for="day in paginatedSalesData" :key="day.date">
                 <td class="date-cell">{{ formatDate(day.date) }}</td>
                 <td>{{ day.orders }}</td>
-                <td class="revenue-cell">${{ day.revenue }}</td>
-                <td>${{ day.avgOrder }}</td>
+                <td class="revenue-cell">
+                  ksh {{ day.revenue.toLocaleString() }}
+                </td>
+                <td>ksh {{ day.avgOrder.toFixed(2) }}</td>
                 <td>{{ day.itemsSold }}</td>
               </tr>
             </tbody>
@@ -441,7 +521,7 @@
       location="top"
       class="custom-toast"
     >
-      <div class="toast-content">
+      <div class="toast-content text-button" style="background: transparent">
         <v-icon>{{ toastIcon }}</v-icon>
         <span>{{ toastMessage }}</span>
       </div>
@@ -450,9 +530,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { usePosStore } from "~/stores/pos";
-// import Chart from "chart.js/auto";
+import RevenueChart from "~/components/charts/RevenueChart.vue";
+import DoughnutChart from "~/components/charts/DoughnutChart.vue";
 
 definePageMeta({
   layout: "default",
@@ -461,8 +542,6 @@ definePageMeta({
 
 const store = usePosStore();
 const loading = ref(false);
-const revenueChart = ref(null);
-const distributionChart = ref(null);
 
 // Date range
 const selectedPreset = ref("week");
@@ -494,7 +573,7 @@ const currentPage = ref(1);
 const tableSearch = ref("");
 const sortKey = ref("date");
 const sortOrder = ref("desc");
-const topProductsLimit = ref(10);
+const topProductsLimit = ref(5);
 
 // Schedule dialog
 const showScheduleDialog = ref(false);
@@ -511,207 +590,369 @@ const toastMessage = ref("");
 const toastColor = ref("success");
 const toastIcon = ref("mdi-check-circle");
 
-// Metrics data
-const metrics = ref([
-  {
-    title: "Total Revenue",
-    value: "$12,426",
-    icon: "mdi-currency-usd",
-    gradient: "linear-gradient(135deg, #2D6A4F, #1B4332)",
-    trend: "up",
-    trendValue: "+12.5%",
-  },
-  {
-    title: "Total Orders",
-    value: "1,234",
-    icon: "mdi-cart-outline",
-    gradient: "linear-gradient(135deg, #E07A5F, #D66B4A)",
-    trend: "up",
-    trendValue: "+8.2%",
-  },
-  {
-    title: "Average Order",
-    value: "$45.20",
-    icon: "mdi-chart-line",
-    gradient: "linear-gradient(135deg, #F4A261, #E9C46A)",
-    trend: "down",
-    trendValue: "-2.4%",
-  },
-  {
-    title: "Items Sold",
-    value: "3,456",
-    icon: "mdi-coffee",
-    gradient: "linear-gradient(135deg, #6B4E71, #4A3B52)",
-    trend: "up",
-    trendValue: "+15.3%",
-  },
-]);
+// Get orders from store
+const orders = computed(() => store.AllOrders || []);
+const productsCategory = computed(() => store.products || []);
 
-// Top products
-const topProducts = ref([
-  {
-    name: "Caramel Macchiato",
-    category: "Coffee",
-    quantity: 234,
-    revenue: 936,
-    percentage: 100,
-  },
-  {
-    name: "Croissant",
-    category: "Snack",
-    quantity: 198,
-    revenue: 693,
-    percentage: 85,
-  },
-  {
-    name: "Matcha Latte",
-    category: "Tea",
-    quantity: 167,
-    revenue: 751,
-    percentage: 71,
-  },
-  {
-    name: "Blueberry Muffin",
-    category: "Snack",
-    quantity: 145,
-    revenue: 435,
-    percentage: 62,
-  },
-  {
-    name: "Iced Americano",
-    category: "Coffee",
-    quantity: 128,
-    revenue: 512,
-    percentage: 55,
-  },
-  {
-    name: "Espresso",
-    category: "Coffee",
-    quantity: 112,
-    revenue: 470,
-    percentage: 48,
-  },
-  {
-    name: "Chai Latte",
-    category: "Tea",
-    quantity: 98,
-    revenue: 441,
-    percentage: 42,
-  },
-  {
-    name: "Chocolate Brownie",
-    category: "Snack",
-    quantity: 87,
-    revenue: 304,
-    percentage: 37,
-  },
-]);
+// Filter orders by date range
+const filteredOrders = computed(() => {
+  if (!orders.value.length) return [];
 
-// Category stats
-const categoryStats = ref([
-  { name: "Coffee", revenue: 5240, percentage: 55, color: "#2D6A4F" },
-  { name: "Tea", revenue: 2380, percentage: 25, color: "#6B4E71" },
-  { name: "Snack", revenue: 1900, percentage: 20, color: "#E07A5F" },
-]);
+  return orders.value.filter((order) => {
+    if (!order.created_at) return false;
+    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    return (
+      orderDate >= dateRange.value.start && orderDate <= dateRange.value.end
+    );
+  });
+});
 
-// Order type stats
-const orderTypeStats = ref([
-  {
-    name: "Dine In",
-    icon: "🍽️",
-    count: 567,
-    revenue: 8920,
-    percentage: 48,
-    color: "#2D6A4F",
-  },
-  {
-    name: "Take Away",
-    icon: "📦",
-    count: 412,
-    revenue: 6210,
-    percentage: 35,
-    color: "#F4A261",
-  },
-  {
-    name: "Online",
-    icon: "📱",
-    count: 255,
-    revenue: 4060,
-    percentage: 17,
-    color: "#6B4E71",
-  },
-]);
+// Previous period orders for trend calculation
+const previousPeriodOrders = computed(() => {
+  if (!orders.value.length) return [];
 
-// Hourly sales
-const hourlySales = ref([
-  { hour: "8 AM", revenue: 0, percentage: 0 },
-  { hour: "9 AM", revenue: 450, percentage: 15 },
-  { hour: "10 AM", revenue: 780, percentage: 26 },
-  { hour: "11 AM", revenue: 920, percentage: 31 },
-  { hour: "12 PM", revenue: 1250, percentage: 42 },
-  { hour: "1 PM", revenue: 1100, percentage: 37 },
-  { hour: "2 PM", revenue: 890, percentage: 30 },
-  { hour: "3 PM", revenue: 670, percentage: 22 },
-  { hour: "4 PM", revenue: 540, percentage: 18 },
-  { hour: "5 PM", revenue: 430, percentage: 14 },
-]);
+  const startDate = new Date(dateRange.value.start);
+  const endDate = new Date(dateRange.value.end);
+  const duration = endDate.getTime() - startDate.getTime();
 
-// Daily sales data
-const salesData = ref([
-  {
-    date: "2024-01-01",
-    orders: 45,
-    revenue: 1890,
-    avgOrder: 42.0,
-    itemsSold: 98,
-  },
-  {
-    date: "2024-01-02",
-    orders: 52,
-    revenue: 2184,
-    avgOrder: 42.0,
-    itemsSold: 112,
-  },
-  {
-    date: "2024-01-03",
-    orders: 48,
-    revenue: 2016,
-    avgOrder: 42.0,
-    itemsSold: 105,
-  },
-  {
-    date: "2024-01-04",
-    orders: 61,
-    revenue: 2562,
-    avgOrder: 42.0,
-    itemsSold: 134,
-  },
-  {
-    date: "2024-01-05",
-    orders: 58,
-    revenue: 2436,
-    avgOrder: 42.0,
-    itemsSold: 127,
-  },
-  {
-    date: "2024-01-06",
-    orders: 72,
-    revenue: 3024,
-    avgOrder: 42.0,
-    itemsSold: 158,
-  },
-  {
-    date: "2024-01-07",
-    orders: 68,
-    revenue: 2856,
-    avgOrder: 42.0,
-    itemsSold: 149,
-  },
-]);
+  const prevStartDate = new Date(startDate.getTime() - duration);
+  const prevEndDate = new Date(endDate.getTime() - duration);
 
-// Computed
+  const prevStart = prevStartDate.toISOString().split("T")[0];
+  const prevEnd = prevEndDate.toISOString().split("T")[0];
+
+  return orders.value.filter((order) => {
+    if (!order.created_at) return false;
+    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    return orderDate >= prevStart && orderDate <= prevEnd;
+  });
+});
+
+// Total Revenue
+const totalRevenue = computed(() => {
+  return filteredOrders.value.reduce(
+    (sum, order) => sum + (order.total || 0),
+    0
+  );
+});
+
+const previousRevenue = computed(() => {
+  return previousPeriodOrders.value.reduce(
+    (sum, order) => sum + (order.total || 0),
+    0
+  );
+});
+
+// Total Orders
+const totalOrders = computed(() => filteredOrders.value.length);
+
+const previousOrders = computed(() => previousPeriodOrders.value.length);
+
+// Average Order Value
+const averageOrderValue = computed(() => {
+  if (totalOrders.value === 0) return 0;
+  return totalRevenue.value / totalOrders.value;
+});
+
+const previousAvgOrder = computed(() => {
+  if (previousOrders.value === 0) return 0;
+  return previousRevenue.value / previousOrders.value;
+});
+
+// Total Items Sold
+const totalItemsSold = computed(() => {
+  return filteredOrders.value.reduce((sum, order) => {
+    const items = order.items || [];
+    return (
+      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
+    );
+  }, 0);
+});
+
+const previousItemsSold = computed(() => {
+  return previousPeriodOrders.value.reduce((sum, order) => {
+    const items = order.items || [];
+    return (
+      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
+    );
+  }, 0);
+});
+
+// Trend calculations
+const calculateTrend = (current: number, previous: number) => {
+  if (previous === 0)
+    return { class: "up", icon: "mdi-arrow-up", value: "+100%" };
+  const percent = ((current - previous) / previous) * 100;
+  const isUp = percent >= 0;
+  return {
+    class: isUp ? "up" : "down",
+    icon: isUp ? "mdi-arrow-up" : "mdi-arrow-down",
+    value: `${isUp ? "+" : ""}${percent.toFixed(1)}%`,
+  };
+};
+
+const revenueTrend = computed(() =>
+  calculateTrend(totalRevenue.value, previousRevenue.value)
+);
+const ordersTrend = computed(() =>
+  calculateTrend(totalOrders.value, previousOrders.value)
+);
+const avgOrderTrend = computed(() =>
+  calculateTrend(averageOrderValue.value, previousAvgOrder.value)
+);
+const itemsTrend = computed(() =>
+  calculateTrend(totalItemsSold.value, previousItemsSold.value)
+);
+
+const revenueTrendClass = computed(() => revenueTrend.value.class);
+const revenueTrendIcon = computed(() => revenueTrend.value.icon);
+const revenueTrendValue = computed(() => revenueTrend.value.value);
+
+const ordersTrendClass = computed(() => ordersTrend.value.class);
+const ordersTrendIcon = computed(() => ordersTrend.value.icon);
+const ordersTrendValue = computed(() => ordersTrend.value.value);
+
+const avgOrderTrendClass = computed(() => avgOrderTrend.value.class);
+const avgOrderTrendIcon = computed(() => avgOrderTrend.value.icon);
+const avgOrderTrendValue = computed(() => avgOrderTrend.value.value);
+
+const itemsTrendClass = computed(() => itemsTrend.value.class);
+const itemsTrendIcon = computed(() => itemsTrend.value.icon);
+const itemsTrendValue = computed(() => itemsTrend.value.value);
+
+// Daily Revenue Data for Chart
+const dailyRevenueData = computed(() => {
+  const dailyMap = new Map();
+
+  filteredOrders.value.forEach((order) => {
+    const date = new Date(order.created_at).toISOString().split("T")[0];
+    const revenue = order.total || 0;
+    dailyMap.set(date, (dailyMap.get(date) || 0) + revenue);
+  });
+
+  // Sort by date
+  const sortedDates = Array.from(dailyMap.keys()).sort();
+  return sortedDates.map((date) => dailyMap.get(date));
+});
+
+const dailyRevenueLabels = computed(() => {
+  const dailyMap = new Map();
+
+  filteredOrders.value.forEach((order: any) => {
+    const date = new Date(order.created_at).toISOString().split("T")[0];
+    dailyMap.set(date, true);
+  });
+
+  return Array.from(dailyMap.keys())
+    .sort()
+    .map((date) => {
+      return new Date(date).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+    });
+});
+
+// Top Selling Products
+const topProductsData = computed(() => {
+  const productMap = new Map();
+
+  filteredOrders.value.forEach((order) => {
+    const items = order.items || [];
+    const categories = productsCategory.value.reduce((map, product) => {
+      map[product.name] = product.category;
+      return map;
+    }, {});
+    items.forEach((item) => {
+      const key = item.name;
+      if (!productMap.has(key)) {
+        productMap.set(key, {
+          name: item.name,
+          category: item.name ? categories[item.name] || "Unknown" : "Unknown",
+          quantity: 0,
+          revenue: 0,
+        });
+      }
+      const product = productMap.get(key);
+      product.quantity += item.quantity || 0;
+      product.revenue +=
+        (item.unitPrice || item.price || 0) * (item.quantity || 0);
+    });
+  });
+
+  const products = Array.from(productMap.values());
+  const maxRevenue = Math.max(...products.map((p) => p.revenue), 1);
+
+  return products
+    .sort((a, b) => b.revenue - a.revenue)
+    .map((p) => ({
+      ...p,
+      percentage: (p.revenue / maxRevenue) * 100,
+    }));
+});
+
+// Category Statistics
+const categoryStatsData = computed(() => {
+  const categoryMap = new Map();
+  const colors = {
+    coffee: "#2D6A4F",
+    tea: "#6B4E71",
+    snack: "#E07A5F",
+  };
+
+  filteredOrders.value.forEach((order: any) => {
+    const items = order.items || [];
+    const categories = productsCategory.value.reduce(
+      (map: any, product: any) => {
+        map[product.name] = product.category;
+        return map;
+      },
+      {}
+    );
+    items.forEach((item: any) => {
+      const category = categories[item.name] || "Unknown";
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, 0);
+      }
+      const revenue =
+        (item.unitPrice || item.price || 0) * (item.quantity || 0);
+      categoryMap.set(category, categoryMap.get(category) + revenue);
+    });
+  });
+
+  const total = Array.from(categoryMap.values()).reduce((a, b) => a + b, 0);
+
+  return Array.from(categoryMap.entries())
+    .map(([name, revenue]) => ({
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      revenue,
+      percentage: total > 0 ? Math.round((revenue / total) * 100) : 0,
+      color: colors[name as keyof typeof colors] || "#9CA3AF",
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+});
+
+// Order Type Statistics
+const orderTypeStatsData = computed(() => {
+  const typeMap = new Map();
+  const icons = {
+    "dine-in": "🍽️",
+    "take-away": "📦",
+    "order-online": "📱",
+  };
+  const colors = {
+    "dine-in": "#2D6A4F",
+    "take-away": "#F4A261",
+    "order-online": "#6B4E71",
+  };
+
+  filteredOrders.value.forEach((order) => {
+    const type = order.orderType || "dine-in";
+    if (!typeMap.has(type)) {
+      typeMap.set(type, { count: 0, revenue: 0 });
+    }
+    const stats = typeMap.get(type);
+    stats.count++;
+    stats.revenue += order.total || 0;
+  });
+
+  const totalCount = filteredOrders.value.length;
+  const totalRevenue = Array.from(typeMap.values()).reduce(
+    (sum, t) => sum + t.revenue,
+    0
+  );
+
+  return Array.from(typeMap.entries())
+    .map(([name, stats]) => ({
+      name: name
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" "),
+      icon: icons[name as keyof typeof icons] || "📋",
+      count: stats.count,
+      revenue: stats.revenue,
+      percentage:
+        totalCount > 0 ? Math.round((stats.count / totalCount) * 100) : 0,
+      color: colors[name as keyof typeof colors] || "#9CA3AF",
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+});
+
+// Hourly Sales Data
+const hourlySalesData = computed(() => {
+  const hourMap = new Map();
+
+  // Initialize hours from 6 AM to 10 PM
+  for (let i = 6; i <= 22; i++) {
+    const hourLabel = i <= 11 ? `${i} AM` : i === 12 ? `12 PM` : `${i - 12} PM`;
+    hourMap.set(i, { hour: hourLabel, revenue: 0 });
+  }
+
+  filteredOrders.value.forEach((order) => {
+    if (order.created_at) {
+      const hour = new Date(order.created_at).getHours();
+      const revenue = order.total || 0;
+      if (hourMap.has(hour)) {
+        const data = hourMap.get(hour);
+        data.revenue += revenue;
+      }
+    }
+  });
+
+  const hours = Array.from(hourMap.entries())
+    .map(([key, value]) => ({
+      hour: value.hour,
+      revenue: value.revenue,
+    }))
+    .sort((a, b) => {
+      const hourA = parseInt(a.hour);
+      const hourB = parseInt(b.hour);
+      return hourA - hourB;
+    });
+
+  const maxRevenue = Math.max(...hours.map((h) => h.revenue), 1);
+
+  return hours.map((h) => ({
+    ...h,
+    percentage: (h.revenue / maxRevenue) * 100,
+  }));
+});
+
+// Daily Sales Data for Table
+const dailySalesData = computed(() => {
+  const dailyMap = new Map();
+
+  filteredOrders.value.forEach((order) => {
+    const date = new Date(order.created_at).toISOString().split("T")[0];
+    if (!dailyMap.has(date)) {
+      dailyMap.set(date, { orders: 0, revenue: 0, itemsSold: 0 });
+    }
+    const data = dailyMap.get(date);
+    data.orders++;
+    data.revenue += order.total || 0;
+
+    const items = order.items || [];
+    items.forEach((item) => {
+      data.itemsSold += item.quantity || 0;
+    });
+  });
+
+  return Array.from(dailyMap.entries())
+    .map(([date, data]) => ({
+      date,
+      orders: data.orders,
+      revenue: data.revenue,
+      avgOrder: data.orders > 0 ? data.revenue / data.orders : 0,
+      itemsSold: data.itemsSold,
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+});
+
+// Filtered and sorted sales data
 const filteredSalesData = computed(() => {
-  let data = [...salesData.value];
+  let data = [...dailySalesData.value];
+
   if (tableSearch.value) {
     data = data.filter(
       (day) =>
@@ -721,11 +962,11 @@ const filteredSalesData = computed(() => {
   }
 
   data.sort((a, b) => {
-    let aVal = a[sortKey.value];
-    let bVal = b[sortKey.value];
+    let aVal = a[sortKey.value as keyof typeof a];
+    let bVal = b[sortKey.value as keyof typeof b];
     if (sortKey.value === "date") {
-      aVal = new Date(aVal).getTime();
-      bVal = new Date(bVal).getTime();
+      aVal = new Date(aVal as string).getTime();
+      bVal = new Date(bVal as string).getTime();
     }
     if (sortOrder.value === "asc") {
       return aVal > bVal ? 1 : -1;
@@ -748,7 +989,7 @@ const totalPages = computed(() =>
 );
 
 // Helper functions
-const formatDate = (date) => {
+const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
@@ -756,25 +997,25 @@ const formatDate = (date) => {
   });
 };
 
-const getRankClass = (rank) => {
+const getRankClass = (rank: number) => {
   if (rank === 1) return "gold";
   if (rank === 2) return "silver";
   if (rank === 3) return "bronze";
   return "";
 };
 
-const getProgressColor = (index) => {
+const getProgressColor = (index: number) => {
   const colors = ["#2D6A4F", "#E07A5F", "#F4A261", "#6B4E71", "#E9C46A"];
   return colors[index % colors.length];
 };
 
-const getHourColor = (percentage) => {
+const getHourColor = (percentage: number) => {
   if (percentage > 35) return "#2D6A4F";
   if (percentage > 20) return "#F4A261";
   return "#E07A5F";
 };
 
-const setDatePreset = (preset) => {
+const setDatePreset = (preset: string) => {
   selectedPreset.value = preset;
   const today = new Date();
   let start = new Date();
@@ -802,7 +1043,7 @@ const setDatePreset = (preset) => {
   fetchReportData();
 };
 
-const sortBy = (key) => {
+const sortBy = (key: string) => {
   if (sortKey.value === key) {
     sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
   } else {
@@ -822,11 +1063,21 @@ const nextPage = () => {
 const fetchReportData = async () => {
   loading.value = true;
   try {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    // Fetch actual data from API here
+    await store.getAllOrders();
     toast("Report data updated successfully!", "success");
   } catch (error) {
     toast("Failed to load report data", "error");
+  } finally {
+    loading.value = false;
+  }
+};
+const fetchProductsData = async () => {
+  loading.value = true;
+  try {
+    await store.getAllProducts();
+    toast("Product data updated successfully!", "success");
+  } catch (error) {
+    toast("Failed to load product data", "error");
   } finally {
     loading.value = false;
   }
@@ -853,7 +1104,7 @@ const scheduleReport = () => {
   toast("Report scheduled successfully!", "success");
 };
 
-const toast = (message, type = "success") => {
+const toast = (message: string, type: string = "success") => {
   toastMessage.value = message;
   toastColor.value = type === "success" ? "#2D6A4F" : "#E07A5F";
   toastIcon.value =
@@ -861,73 +1112,9 @@ const toast = (message, type = "success") => {
   showToast.value = true;
 };
 
-// Initialize charts
-const initCharts = () => {
-  const revenueCtx = document.getElementById("revenueChart")?.getContext("2d");
-  if (revenueCtx && revenueChart.value === null) {
-    revenueChart.value = new Chart(revenueCtx, {
-      type: selectedChartType.value,
-      data: {
-        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        datasets: [
-          {
-            label: "Revenue",
-            data: [1250, 1420, 1380, 1650, 1890, 2100, 1950],
-            borderColor: "#2D6A4F",
-            backgroundColor: "rgba(45, 106, 79, 0.1)",
-            tension: 0.4,
-            fill: true,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-      },
-    });
-  }
-
-  const distributionCtx = document
-    .getElementById("distributionChart")
-    ?.getContext("2d");
-  if (distributionCtx && distributionChart.value === null) {
-    distributionChart.value = new Chart(distributionCtx, {
-      type: "doughnut",
-      data: {
-        labels: ["Coffee", "Tea", "Snack"],
-        datasets: [
-          {
-            data: [55, 25, 20],
-            backgroundColor: ["#2D6A4F", "#6B4E71", "#E07A5F"],
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-        },
-      },
-    });
-  }
-};
-
-watch(selectedChartType, () => {
-  if (revenueChart.value) {
-    revenueChart.value.destroy();
-    revenueChart.value = null;
-    initCharts();
-  }
-});
-
 onMounted(async () => {
   await fetchReportData();
-  initCharts();
+  await fetchProductsData();
 });
 </script>
 
