@@ -59,7 +59,7 @@
           <v-icon color="#E07A5F">mdi-currency-usd</v-icon>
         </div>
         <div class="summary-info">
-          <div class="summary-value">${{ totalRevenue }}</div>
+          <div class="summary-value">ksh{{ totalRevenue }}</div>
           <div class="summary-label">Total Revenue</div>
         </div>
       </div>
@@ -68,7 +68,7 @@
           <v-icon color="#F4A261">mdi-chart-line</v-icon>
         </div>
         <div class="summary-info">
-          <div class="summary-value">${{ avgOrderValue }}</div>
+          <div class="summary-value">ksh{{ avgOrderValue }}</div>
           <div class="summary-label">Average Order</div>
         </div>
       </div>
@@ -100,7 +100,7 @@
                 </span>
               </td>
               <td>{{ order.items.length }} items</td>
-              <td class="amount-cell">${{ order.total }}</td>
+              <td class="amount-cell">ksh{{ order.total }}</td>
               <td>{{ formatDate(order.created_at) }}</td>
               <td>
                 <span class="status-badge" :class="order.status || 'completed'">
@@ -217,9 +217,21 @@
                 <span>{{ item.temp || "Hot" }}</span>
               </div>
             </div>
-            <div class="item-detail-qty">x{{ item.quantity }}</div>
+
+            <div
+              class="item-detail-qty text-overline"
+              style="color: #6b7280; font-size: 11px; font-weight: 600"
+            >
+              <span
+                style="color: #6b7280; font-size: 11px; font-weight: 600"
+                class="text-overline"
+                >ksh{{ item.price }}</span
+              >
+              x
+              {{ item.quantity }}
+            </div>
             <div class="item-detail-price">
-              ${{ (item.unitPrice * item.quantity).toFixed(2) }}
+              ksh{{ (item.price * item.quantity).toFixed(2) }}
             </div>
           </div>
         </div>
@@ -227,15 +239,15 @@
         <div class="order-summary">
           <div class="summary-row">
             <span>Subtotal</span>
-            <span>${{ selectedOrder?.subtotal }}</span>
+            <span>ksh{{ selectedOrder?.subtotal }}</span>
           </div>
           <div class="summary-row">
             <span>Tax (10%)</span>
-            <span>${{ selectedOrder?.tax }}</span>
+            <span>ksh{{ selectedOrder?.tax }}</span>
           </div>
           <div class="summary-row total">
             <span>Total</span>
-            <span>${{ selectedOrder?.total }}</span>
+            <span>ksh{{ selectedOrder?.total }}</span>
           </div>
         </div>
 
