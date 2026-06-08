@@ -30,9 +30,21 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    status: Optional[str] = None
     created_at: datetime
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+from pydantic import BaseModel
+from datetime import datetime
+
+class ActivityLog(BaseModel):
+    user_id: str
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    action: str
+    message: str
+    created_at: datetime = datetime.utcnow()
