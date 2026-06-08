@@ -292,6 +292,7 @@ const revenueChartCanvas = ref<HTMLCanvasElement | null>(null);
 
 // Get all orders from store
 const allOrders = computed(() => store.AllOrders || []);
+const AllLogs = computed(() => authStore.activityLogs || []);
 
 // Today's date
 const today = new Date().toISOString().split("T")[0];
@@ -581,35 +582,53 @@ const updateRevenueChart = () => {
   });
 };
 
-// Recent Activities (based on actual orders)
+// Recent Activities (based on actual logs from authStore)
+const activityMeta: Record<string, { icon: string; color: string }> = {
+  user_logged_in: {
+    icon: "mdi-login",
+    color: "#2D6A4F",
+  },
+  user_logout: {
+    icon: "mdi-logout",
+    color: "#E07A5F",
+  },
+  user_registered: {
+    icon: "mdi-account-plus",
+    color: "#6B4E71",
+  },
+  order_created: {
+    icon: "mdi-cart-plus",
+    color: "#2D6A4F",
+  },
+  product_created: {
+    icon: "mdi-coffee",
+    color: "#E07A5F",
+  },
+};
 const recentActivities = computed(() => {
-  const activities = [];
+  return [...AllLogs.value]
+    .sort(
+      (a: ActivityLog, b: ActivityLog) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+    .slice(0, 5)
+    .map((log: ActivityLog, index) => {
+      const meta = activityMeta[log.action] || {
+        icon: "mdi-information",
+        color: "#6B7280",
+      };
 
-  // Add order activities
-  allOrders.value.slice(0, 5).forEach((order, index) => {
-    const time = new Date(order.created_at);
-    const now = new Date();
-    const diffMs = now.getTime() - time.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-
-    let timeAgo = "";
-    if (diffMins < 1) timeAgo = "Just now";
-    else if (diffMins < 60) timeAgo = `${diffMins} min ago`;
-    else if (diffHours < 24)
-      timeAgo = `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    else timeAgo = time.toLocaleDateString();
-
-    activities.push({
-      id: `order-${order._id}`,
-      text: `New order #${order.receiptNumber} placed by ${order.customerName}`,
-      time: timeAgo,
-      icon: "mdi-cart-plus",
-      color: "#2D6A4F",
+      return {
+        id: log._id || log.id || index,
+        text: log.message || log.action,
+        time: new Date(log.created_at).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        icon: meta.icon,
+        color: meta.color,
+      };
     });
-  });
-
-  return activities.slice(0, 4);
 });
 
 // Date formatting
@@ -653,6 +672,7 @@ const manageUsers = () => {
 onMounted(async () => {
   await store.getAllOrders();
   await store.getAllProducts();
+  await authStore.getActivityLogs();
   initRevenueChart();
 });
 </script>
