@@ -484,7 +484,7 @@
           <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
           <v-btn
             color="#E07A5F"
-            @click="confirmDelete"
+            @click="confirmDeleteUser"
             class="delete-confirm-btn"
           >
             Delete User
@@ -550,37 +550,7 @@ const form = ref({
     viewReports: false,
   },
 });
-
-// Mock users data
-const users = ref([
-  {
-    id: 1,
-    name: "John Admin",
-    email: "admin@coffee.com",
-    role: "admin",
-    status: "active",
-    lastActive: new Date(),
-    avatar: null,
-  },
-  {
-    id: 2,
-    name: "Sarah Cashier",
-    email: "sarah@coffee.com",
-    role: "cashier",
-    status: "active",
-    lastActive: new Date(),
-    avatar: null,
-  },
-  {
-    id: 3,
-    name: "Michael Johnson",
-    email: "michael@coffee.com",
-    role: "cashier",
-    status: "inactive",
-    lastActive: new Date(Date.now() - 86400000 * 2),
-    avatar: null,
-  },
-]);
+const users = computed(() => authStore.AllDbUsers || []);
 
 // Table headers
 const headers = [
@@ -787,8 +757,10 @@ const saveUser = async () => {
   userDialog.value = false;
 };
 
-const toggleUserStatus = (user: any) => {
+const toggleUserStatus = async (user: any) => {
   user.status = user.status === "active" ? "inactive" : "active";
+  await authStore.UserStatus(user.id, user.status);
+  await authStore.getAllUsers();
   showMessage(
     `User ${
       user.status === "active" ? "activated" : "deactivated"
@@ -797,18 +769,25 @@ const toggleUserStatus = (user: any) => {
 };
 
 const confirmDelete = (user: any) => {
+  console.log("User to delete:", user);
   userToDelete.value = user;
   deleteDialog.value = true;
 };
 
-const confirmDeleteUser = () => {
-  const index = users.value.findIndex((u) => u.id === userToDelete.value.id);
-  if (index !== -1) {
-    users.value.splice(index, 1);
-    showMessage("User deleted successfully!");
+const confirmDeleteUser = async () => {
+  try {
+    users.value = users.value.filter(
+      (u: any) => u.id !== userToDelete.value.id
+    );
+    await authStore.deleteUser(userToDelete.value.id);
+    await authStore.getAllUsers();
+    console.log("Deleted user and Fetched Users:", userToDelete.value);
+    showMessage("User deleted successfully!", "error");
+  } catch (error) {
+    showMessage("Failed to delete user. Please try again.", "error");
+  } finally {
+    deleteDialog.value = false;
   }
-  deleteDialog.value = false;
-  userToDelete.value = null;
 };
 
 const clearFilters = () => {
@@ -833,8 +812,9 @@ const handleImageUpload = (event: any) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   // Fetch users from API
+  await authStore.getAllUsers();
   loading.value = false;
 });
 </script>
