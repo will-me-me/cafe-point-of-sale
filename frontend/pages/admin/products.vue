@@ -76,7 +76,7 @@
             {{ product.category }}
           </div>
           <h3 class="product-name">{{ product.name }}</h3>
-          <div class="product-price">${{ product.price }}</div>
+          <div class="product-price">ksh{{ product.price }}</div>
           <div class="product-stats">
             <span class="stat">
               <v-icon size="14">mdi-chart-line</v-icon>
@@ -120,7 +120,7 @@
                   v-model="form.price"
                   placeholder="0.00"
                   type="number"
-                  prefix="$"
+                  prefix="ksh"
                   variant="outlined"
                   :rules="[rules.required, rules.positive]"
                 />
