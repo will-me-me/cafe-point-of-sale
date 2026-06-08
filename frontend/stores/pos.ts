@@ -35,6 +35,7 @@ interface Oders {
   total: number;
   date: string;
 }
+import { useAuthStore } from "./auth";
 
 export const usePosStore = defineStore("pos", {
   state: () => ({
@@ -67,48 +68,7 @@ export const usePosStore = defineStore("pos", {
       },
     ] as Category[],
 
-    products: [
-      // { id: 1, name: "Espresso", price: 4.2, category: "coffee" as const },
-      // { id: 2, name: "Cappuchino", price: 3.3, category: "coffee" as const },
-      // { id: 3, name: "Latte", price: 4.0, category: "coffee" as const },
-      // { id: 4, name: "Americano", price: 4.0, category: "coffee" as const },
-      // { id: 5, name: "Mocha", price: 4.0, category: "coffee" as const },
-      // {
-      //   id: 6,
-      //   name: "Iced Coffee Milk",
-      //   price: 3.8,
-      //   category: "coffee" as const,
-      // },
-      // { id: 7, name: "Cold Brew", price: 4.0, category: "coffee" as const },
-      // { id: 8, name: "Flat White", price: 3.8, category: "coffee" as const },
-      // { id: 9, name: "Caramel Mac", price: 4.0, category: "coffee" as const },
-      // {
-      //   id: 10,
-      //   name: "Salted Caramel",
-      //   price: 4.2,
-      //   category: "coffee" as const,
-      // },
-      // {
-      //   id: 11,
-      //   name: "Hazelnut Latte",
-      //   price: 4.0,
-      //   category: "coffee" as const,
-      // },
-      // { id: 12, name: "Pour Over", price: 4.0, category: "coffee" as const },
-      // { id: 13, name: "Green Tea", price: 3.5, category: "tea" as const },
-      // { id: 14, name: "Black Tea", price: 3.5, category: "tea" as const },
-      // { id: 15, name: "Chamomile", price: 3.8, category: "tea" as const },
-      // { id: 16, name: "Earl Grey", price: 3.5, category: "tea" as const },
-      // { id: 17, name: "Matcha Latte", price: 4.5, category: "tea" as const },
-      // { id: 18, name: "Croissant", price: 3.5, category: "snack" as const },
-      // { id: 19, name: "Muffin", price: 3.0, category: "snack" as const },
-      // { id: 20, name: "Cookie", price: 2.5, category: "snack" as const },
-      // { id: 21, name: "Brownie", price: 3.5, category: "snack" as const },
-      // { id: 22, name: "Bagel", price: 2.0, category: "snack" as const },
-      // { id: 23, name: "Scone", price: 3.0, category: "snack" as const },
-      // { id: 24, name: "Donut", price: 2.5, category: "snack" as const },
-      // { id: 25, name: "Pancake", price: 4.0, category: "snack" as const },
-    ] as Product[],
+    products: [] as Product[],
 
     cart: [] as CartItem[],
     selectedCategory: "coffee" as string,
@@ -155,11 +115,21 @@ export const usePosStore = defineStore("pos", {
       this.selectedCategory = category;
     },
 
-    async addProduct(formData) {
+    async addProduct(formData: FormData) {
+      const authStore = useAuthStore();
+
       try {
+        console.log("token in addProduct:", authStore.token);
+        let tokenValue = localStorage.getItem("auth_token");
+        console.log("localStorage token in addProduct:", tokenValue);
+
         const res = await fetch("http://127.0.0.1:8000/products/", {
           method: "POST",
           body: formData,
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+            Accept: "application/json",
+          },
         });
 
         if (!res.ok) {
