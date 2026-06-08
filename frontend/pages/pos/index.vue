@@ -144,7 +144,7 @@
           </div>
           <div class="product-info">
             <div class="product-name">{{ product.name }}</div>
-            <div class="product-price">${{ product.price }}</div>
+            <div class="product-price">ksh{{ product.price }}</div>
           </div>
         </div>
       </div>
@@ -286,7 +286,7 @@
               </div>
             </div>
             <div class="item-price">
-              ${{ (item.unitPrice * item.quantity).toFixed(2) }}
+              ksh{{ (item.unitPrice * item.quantity).toFixed(2) }}
             </div>
             <div class="item-quantity">
               <v-btn
@@ -328,15 +328,15 @@
         <div class="payment-details">
           <div class="payment-row">
             <span>Subtotal</span>
-            <span>${{ store.subtotal.toFixed(2) }}</span>
+            <span>ksh{{ store.subtotal.toFixed(2) }}</span>
           </div>
           <div class="payment-row">
             <span>Tax (10%)</span>
-            <span>${{ store.tax.toFixed(2) }}</span>
+            <span>ksh{{ store.tax.toFixed(2) }}</span>
           </div>
           <div class="payment-row total-row">
             <span>Total</span>
-            <span class="total-amount">${{ store.total.toFixed(2) }}</span>
+            <span class="total-amount">ksh{{ store.total.toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -350,7 +350,7 @@
         @click="placeOrder"
       >
         <span>Place Order</span>
-        <span class="order-total">${{ store.total.toFixed(2) }}</span>
+        <span class="order-total">ksh{{ store.total.toFixed(2) }}</span>
         <v-icon end>mdi-arrow-right</v-icon>
       </v-btn>
     </div>
@@ -397,7 +397,7 @@
               :rules="[rules.required, rules.positive]"
               variant="outlined"
               density="comfortable"
-              prefix="$"
+              prefix="ksh"
             />
             <v-select
               v-model="product.category"
@@ -543,10 +543,21 @@ const placeOrder = async () => {
     try {
       await store.saveOrder(orderData);
       const orders = await store.getAllOrders();
-      TodaysTotalOrders.value = orders.filter((order) => {
+      console.log("All orders after placing new order:", orders);
+      const todaysDateString = new Date().toLocaleDateString();
+      TodaysTotalOrders.value = orders.reduce((count, order) => {
         const orderDate = new Date(order.created_at).toLocaleDateString();
-        return orderDate === new Date().toLocaleDateString();
-      }).length;
+        console.log(
+          `Order ${order._id} date: ${orderDate}, matches today: ${
+            orderDate === todaysDateString
+          }`
+        );
+        return count + (orderDate === todaysDateString ? 1 : 0);
+      }, 0);
+      console.log(
+        "Today's total orders after placing new order:",
+        TodaysTotalOrders.value
+      );
 
       store.clearCart();
       receiptNumber.value = generateUniqueReceipt();
@@ -644,6 +655,7 @@ onMounted(async () => {
       const orderDate = new Date(order.created_at).toLocaleDateString();
       return count + (orderDate === todayString ? 1 : 0);
     }, 0);
+    console.log("Today's total orders:", TodaysTotalOrders.value);
   } catch (error) {
     console.error("Error loading data:", error);
     snackbar.value = {
