@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from orders.routes import router as orders_router
 from products.routes import router as products_router
 from users.routes import router as users_router
+from mpesa.routes import router as mpesa_router
 app = FastAPI()
 
 # CORS
@@ -18,6 +19,7 @@ app.add_middleware(
 app.include_router(users_router)
 app.include_router(orders_router)
 app.include_router(products_router)
+app.include_router(mpesa_router,  prefix="/mpesa", tags=["M-Pesa"])
 
 
 @app.get("/")
