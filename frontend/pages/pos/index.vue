@@ -176,7 +176,14 @@
           <div class="receipt-number">{{ receiptNumber }}</div>
         </div>
         <div class="order-actions">
-          <v-btn icon variant="text" size="small" class="action-btn">
+          <v-btn
+            icon
+            variant="text"
+            size="small"
+            class="action-btn"
+            @click="reprintReceipt(store.AllOrders[0])"
+            @dblclick="reprintReceipt(store.AllOrders[1])"
+          >
             <v-icon size="20">mdi-printer-outline</v-icon>
           </v-btn>
           <v-btn icon variant="text" size="small" class="action-btn">
@@ -321,6 +328,234 @@
           Start by adding items from the menu
         </div>
       </div>
+      <!-- payment mode section either cash, mpesa, debt -->
+      <!-- Add this after the empty cart section and before Payment Section -->
+      <!-- Payment Mode Section -->
+      <div class="payment-mode-section" v-if="store.hasCartItems">
+        <div class="payment-mode-header">
+          <v-icon class="header-icon">mdi-credit-card</v-icon>
+          <span>Payment Method</span>
+        </div>
+        <div class="payment-mode-options">
+          <div
+            v-for="mode in paymentModes"
+            :key="mode.value"
+            :class="[
+              'payment-mode-card',
+              { active: store.paymentMode === mode.value },
+            ]"
+            @click="store.paymentMode = mode.value"
+          >
+            <v-icon
+              :color="store.paymentMode === mode.value ? '#2D6A4F' : '#6B7280'"
+              size="24"
+            >
+              {{ mode.icon }}
+            </v-icon>
+            <div class="mode-info">
+              <div class="mode-name">{{ mode.title }}</div>
+              <div class="mode-desc">{{ mode.description }}</div>
+            </div>
+            <v-icon
+              v-if="store.paymentMode === mode.value"
+              class="check-icon"
+              size="20"
+              color="#2D6A4F"
+            >
+              mdi-check-circle
+            </v-icon>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cash Payment Input (shows when cash is selected) -->
+      <transition name="slide-fade">
+        <div
+          v-if="store.hasCartItems && store.paymentMode === 'cash'"
+          class="cash-payment-section"
+        >
+          <div class="cash-payment-header">
+            <v-icon>mdi-cash-multiple</v-icon>
+            <span>Cash Payment</span>
+          </div>
+          <div class="cash-input-group">
+            <label>Amount Received</label>
+            <div class="currency-input">
+              <span class="currency-symbol">KSH</span>
+              <input
+                type="number"
+                v-model.number="cashAmount"
+                placeholder="0.00"
+                @input="calculateChange"
+                class="cash-input-field"
+              />
+            </div>
+          </div>
+          <div v-if="cashAmount >= store.total" class="change-display">
+            <div class="change-label">Change Due</div>
+            <div class="change-amount">KSH {{ changeAmount.toFixed(2) }}</div>
+          </div>
+          <div
+            v-else-if="cashAmount > 0 && cashAmount < store.total"
+            class="insufficient-warning"
+          >
+            <v-icon size="20" color="#E07A5F">mdi-alert-circle</v-icon>
+            <span
+              >Insufficient amount. Please enter KSH
+              {{ (store.total - cashAmount).toFixed(2) }} more.</span
+            >
+          </div>
+        </div>
+      </transition>
+
+      <!-- M-Pesa Payment Dialog -->
+      <v-dialog
+        v-model="showMpesaDialog"
+        max-width="450"
+        transition="dialog-transition"
+      >
+        <v-card class="mpesa-dialog">
+          <div class="dialog-header">
+            <div class="header-content">
+              <div class="mpesa-logo">
+                <v-icon size="32" color="#2D6A4F">mdi-cellphone</v-icon>
+                <span>M-Pesa Payment</span>
+              </div>
+            </div>
+            <v-btn icon variant="text" @click="closeMpesaDialog">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+
+          <div class="dialog-body">
+            <div class="amount-display">
+              <div class="amount-label">Amount to Pay</div>
+              <div class="amount-value">KSH {{ store.total.toFixed(2) }}</div>
+            </div>
+
+            <div class="input-group">
+              <label>M-Pesa Phone Number</label>
+              <div class="phone-input">
+                <span class="country-code">+254</span>
+                <input
+                  type="tel"
+                  v-model="mpesaPhone"
+                  placeholder="712345678"
+                  maxlength="9"
+                  class="phone-field"
+                  @input="validatePhoneNumber"
+                />
+              </div>
+              <div class="input-hint">
+                Enter the M-Pesa registered phone number
+              </div>
+            </div>
+
+            <div class="payment-instructions">
+              <div class="instruction-item">
+                <div class="instruction-step">1</div>
+                <div class="instruction-text">
+                  Check your phone for STK Push prompt
+                </div>
+              </div>
+              <div class="instruction-item">
+                <div class="instruction-step">2</div>
+                <div class="instruction-text">
+                  Enter your M-Pesa PIN to confirm payment
+                </div>
+              </div>
+              <div class="instruction-item">
+                <div class="instruction-step">3</div>
+                <div class="instruction-text">
+                  Wait for confirmation message
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dialog-actions">
+            <v-btn variant="outlined" @click="closeMpesaDialog">Cancel</v-btn>
+            <v-btn
+              color="#2D6A4F"
+              :disabled="!isValidPhone || isProcessing"
+              :loading="isProcessing"
+              @click="processMpesaPayment"
+            >
+              <v-icon start>mdi-check</v-icon>
+              Pay with M-Pesa
+            </v-btn>
+          </div>
+        </v-card>
+      </v-dialog>
+
+      <!-- Debt Confirmation Dialog -->
+      <v-dialog
+        v-model="showDebtDialog"
+        max-width="400"
+        transition="dialog-transition"
+      >
+        <v-card class="debt-dialog">
+          <div class="debt-icon">
+            <v-icon size="64" color="#E07A5F">mdi-account-cash</v-icon>
+          </div>
+          <h3>Confirm Debt Order</h3>
+          <p>
+            This order will be recorded as debt for customer
+            <strong>{{ customerName || "Guest" }}</strong>
+          </p>
+          <div class="debt-amount">
+            Total Amount: KSH {{ store.total.toFixed(2) }}
+          </div>
+          <div class="debt-warning">
+            <v-icon size="18" color="#E07A5F">mdi-alert</v-icon>
+            <span
+              >This amount will be added to customer's outstanding balance</span
+            >
+          </div>
+          <div class="dialog-actions">
+            <v-btn variant="text" @click="showDebtDialog = false">Cancel</v-btn>
+            <v-btn color="#E07A5F" @click="processDebtPayment">
+              Confirm Debt Order
+            </v-btn>
+          </div>
+        </v-card>
+      </v-dialog>
+
+      <!-- Cash Payment Confirmation Dialog -->
+      <v-dialog
+        v-model="showCashConfirmDialog"
+        max-width="400"
+        transition="dialog-transition"
+      >
+        <v-card class="cash-confirm-dialog">
+          <div class="confirm-icon">
+            <v-icon size="64" color="#2D6A4F">mdi-cash-check</v-icon>
+          </div>
+          <h3>Confirm Cash Payment</h3>
+          <div class="payment-breakdown">
+            <div class="breakdown-row">
+              <span>Total Amount:</span>
+              <span>KSH {{ store.total.toFixed(2) }}</span>
+            </div>
+            <div class="breakdown-row">
+              <span>Amount Received:</span>
+              <span>KSH {{ cashAmount.toFixed(2) }}</span>
+            </div>
+            <div class="breakdown-row change">
+              <span>Change Due:</span>
+              <span>KSH {{ changeAmount.toFixed(2) }}</span>
+            </div>
+          </div>
+          <div class="dialog-actions">
+            <v-btn variant="text" @click="showCashConfirmDialog = false"
+              >Cancel</v-btn
+            >
+            <v-btn color="#2D6A4F" @click="processCashPayment">
+              Confirm Payment
+            </v-btn>
+          </div>
+        </v-card>
+      </v-dialog>
 
       <!-- Payment Section -->
       <div v-if="store.hasCartItems" class="payment-section">
@@ -458,12 +693,13 @@
 import { ref, watch, onMounted } from "vue";
 import { usePosStore } from "~/stores/pos";
 import { useAuthStore } from "~/stores/auth";
+import { useReceipt } from "~/composables/useReceipt";
 
 definePageMeta({
   layout: "default",
   middleware: "auth",
 });
-
+const receipt = useReceipt();
 const authStore = useAuthStore();
 const store = usePosStore();
 const searchQuery = ref("");
@@ -504,6 +740,250 @@ const rules = {
   required: (v: any) => !!v || "This field is required",
   positive: (v: number) => v > 0 || "Price must be positive",
 };
+const paymentModes = [
+  {
+    value: "cash",
+    title: "Cash",
+    icon: "mdi-cash",
+    description: "Pay with cash",
+  },
+  {
+    value: "mpesa",
+    title: "M-Pesa",
+    icon: "mdi-cellphone",
+    description: "Mobile money payment",
+  },
+  {
+    value: "debt",
+    title: "Debt",
+    icon: "mdi-account-cash",
+    description: "Pay later / Credit",
+  },
+];
+
+// Cash payment
+const cashAmount = ref(0);
+const changeAmount = ref(0);
+
+// M-Pesa payment
+const showMpesaDialog = ref(false);
+const mpesaPhone = ref("");
+const isProcessing = ref(false);
+const isValidPhone = computed(() => {
+  return /^[0-9]{9}$/.test(mpesaPhone.value);
+});
+
+// Debt payment
+const showDebtDialog = ref(false);
+
+// Cash confirmation
+const showCashConfirmDialog = ref(false);
+
+// Calculate change
+const calculateChange = () => {
+  if (cashAmount.value >= store.total) {
+    changeAmount.value = cashAmount.value - store.total;
+  } else {
+    changeAmount.value = 0;
+  }
+};
+
+// Validate phone number
+const validatePhoneNumber = () => {
+  mpesaPhone.value = mpesaPhone.value.replace(/[^0-9]/g, "").slice(0, 9);
+};
+
+// Close M-Pesa dialog
+const closeMpesaDialog = () => {
+  showMpesaDialog.value = false;
+  mpesaPhone.value = "";
+  isProcessing.value = false;
+};
+
+// Process M-Pesa payment
+const processMpesaPayment = async () => {
+  if (!isValidPhone.value) return;
+
+  isProcessing.value = true;
+
+  // Simulate M-Pesa API call
+  setTimeout(async () => {
+    isProcessing.value = false;
+    closeMpesaDialog();
+
+    // Add payment mode to order data
+    const orderData = {
+      receiptNumber: receiptNumber.value,
+      orderType: orderType.value,
+      customerName: customerName.value || authStore.user?.name || "Guest",
+      tableNumber: tableNumber.value,
+      items: store.cartItems,
+      subtotal: store.subtotal,
+      tax: store.tax,
+      total: store.total,
+      paymentMode: "mpesa",
+      mpesaNumber: mpesaPhone.value,
+      paymentStatus: "completed",
+    };
+    console.log("Processing M-Pesa payment with data:", orderData);
+
+    await completeOrder(orderData);
+
+    snackbar.value = {
+      show: true,
+      text: `M-Pesa payment of KSH ${orderData.total.toFixed(
+        2
+      )} received from ${mpesaPhone.value}`,
+      color: "success",
+    };
+  }, 2000);
+};
+
+// Process cash payment
+const processCashPayment = async () => {
+  if (cashAmount.value < store.total) return;
+
+  showCashConfirmDialog.value = false;
+
+  const orderData = {
+    receiptNumber: receiptNumber.value,
+    orderType: orderType.value,
+    customerName: customerName.value || authStore.user?.name || "Guest",
+    tableNumber: tableNumber.value,
+    items: store.cartItems,
+    subtotal: store.subtotal,
+    tax: store.tax,
+    total: store.total,
+    paymentMode: "cash",
+    amountReceived: cashAmount.value,
+    changeDue: changeAmount.value,
+    paymentStatus: "completed",
+  };
+  console.log("Processing cash payment with data:", orderData);
+
+  await completeOrder(orderData);
+
+  snackbar.value = {
+    show: true,
+    text: `Cash payment of KSH ${orderData.total.toFixed(
+      2
+    )} received. Change: KSH ${changeAmount.value.toFixed(2)}`,
+    color: "success",
+  };
+
+  // Reset cash amount
+  cashAmount.value = 0;
+  changeAmount.value = 0;
+};
+
+// Process debt payment
+const processDebtPayment = async () => {
+  showDebtDialog.value = false;
+
+  const orderData = {
+    receiptNumber: receiptNumber.value,
+    orderType: orderType.value,
+    customerName: customerName.value || authStore.user?.name || "Guest",
+    tableNumber: tableNumber.value,
+    items: store.cartItems,
+    subtotal: store.subtotal,
+    tax: store.tax,
+    total: store.total,
+    paymentMode: "debt",
+    paymentStatus: "pending",
+    dueDate: new Date(Date.now() + 7 * 86400000).toISOString(), // 7 days due
+  };
+
+  await completeOrder(orderData);
+
+  snackbar.value = {
+    show: true,
+    text: `Debt order recorded. Payment due in 7 days. Total: KSH ${orderData.total.toFixed(
+      2
+    )}`,
+    color: "warning",
+  };
+};
+
+// Complete order function
+const completeOrder = async (orderData: any) => {
+  try {
+    // Add cashier name to order data
+    orderData.cashier = authStore.user?.name || "Cashier";
+
+    // Save order to database
+    await store.saveOrder(orderData);
+
+    // Fetch updated orders
+    const orders = await store.getAllOrders();
+
+    // Update today's order count
+    const todaysDateString = new Date().toLocaleDateString();
+    TodaysTotalOrders.value = orders.reduce((count, order) => {
+      const orderDate = new Date(order.created_at).toLocaleDateString();
+      return count + (orderDate === todaysDateString ? 1 : 0);
+    }, 0);
+
+    // ===== PRINT RECEIPT =====
+    try {
+      // Try to print using ESC/POS printer (Bluetooth/USB)
+      const printed = await receipt.printReceipt(orderData, true);
+
+      if (printed) {
+        console.log("✅ Receipt printed successfully");
+      } else {
+        console.warn(
+          "⚠️ ESC/POS printing failed, browser print may have been used"
+        );
+      }
+    } catch (printError) {
+      console.error("Print failed:", printError);
+      // Browser print will be used as fallback
+    }
+
+    // ===== DOWNLOAD RECEIPT (Backup) =====
+    try {
+      receipt.downloadReceipt(orderData);
+      console.log("📥 Receipt downloaded successfully");
+    } catch (downloadError) {
+      console.warn("Receipt download failed:", downloadError);
+    }
+
+    // ===== LOG RECEIPT TO CONSOLE (Debug) =====
+    console.log("📄 Receipt Text:\n", receipt.generateReceiptText(orderData));
+
+    // Clear cart and reset
+    store.clearCart();
+    receiptNumber.value = generateUniqueReceipt();
+    store.paymentMode = "cash"; // Reset to default
+
+    // Show success message
+    snackbar.value = {
+      show: true,
+      text: "Order placed and receipt printed successfully!",
+      color: "success",
+    };
+  } catch (error) {
+    console.error("Error completing order:", error);
+    snackbar.value = {
+      show: true,
+      text: "Failed to complete order. Please try again.",
+      color: "error",
+    };
+    throw error;
+  }
+};
+
+const reprintReceipt = (order: any) => {
+  if (order) {
+    receipt.printReceipt(order);
+    snackbar.value = {
+      show: true,
+      text: "Receipt reprinted successfully!",
+      color: "success",
+    };
+  }
+};
 
 const usedReceipts = new Set<string>();
 function generateUniqueReceipt() {
@@ -528,54 +1008,75 @@ if (authStore.user) {
 }
 
 const placeOrder = async () => {
-  if (store.hasCartItems) {
-    const orderData = {
-      receiptNumber: receiptNumber.value,
-      orderType: orderType.value,
-      customerName: customerName.value || authStore.user?.name || "Guest",
-      tableNumber: tableNumber.value,
-      items: store.cartItems,
-      subtotal: store.subtotal,
-      tax: store.tax,
-      total: store.total,
-    };
+  if (!store.hasCartItems) return;
 
-    try {
-      await store.saveOrder(orderData);
-      const orders = await store.getAllOrders();
-      console.log("All orders after placing new order:", orders);
-      const todaysDateString = new Date().toLocaleDateString();
-      TodaysTotalOrders.value = orders.reduce((count, order) => {
-        const orderDate = new Date(order.created_at).toLocaleDateString();
-        console.log(
-          `Order ${order._id} date: ${orderDate}, matches today: ${
-            orderDate === todaysDateString
-          }`
-        );
-        return count + (orderDate === todaysDateString ? 1 : 0);
-      }, 0);
-      console.log(
-        "Today's total orders after placing new order:",
-        TodaysTotalOrders.value
-      );
-
-      store.clearCart();
-      receiptNumber.value = generateUniqueReceipt();
-
+  // Show appropriate dialog based on payment mode
+  if (store.paymentMode === "mpesa") {
+    showMpesaDialog.value = true;
+  } else if (store.paymentMode === "cash") {
+    if (cashAmount.value < store.total) {
       snackbar.value = {
         show: true,
-        text: "Order placed successfully!",
-        color: "success",
-      };
-    } catch (error) {
-      snackbar.value = {
-        show: true,
-        text: "Failed to place order",
+        text: `Please enter amount of KSH ${store.total.toFixed(2)} or more`,
         color: "error",
       };
+      return;
     }
+    showCashConfirmDialog.value = true;
+  } else if (store.paymentMode === "debt") {
+    showDebtDialog.value = true;
   }
 };
+
+// const placeOrder = async () => {
+//   if (store.hasCartItems) {
+//     const orderData = {
+//       receiptNumber: receiptNumber.value,
+//       orderType: orderType.value,
+//       customerName: customerName.value || authStore.user?.name || "Guest",
+//       tableNumber: tableNumber.value,
+//       items: store.cartItems,
+//       subtotal: store.subtotal,
+//       tax: store.tax,
+//       total: store.total,
+//     };
+
+//     try {
+//       await store.saveOrder(orderData);
+//       const orders = await store.getAllOrders();
+//       console.log("All orders after placing new order:", orders);
+//       const todaysDateString = new Date().toLocaleDateString();
+//       TodaysTotalOrders.value = orders.reduce((count, order) => {
+//         const orderDate = new Date(order.created_at).toLocaleDateString();
+//         console.log(
+//           `Order ${order._id} date: ${orderDate}, matches today: ${
+//             orderDate === todaysDateString
+//           }`
+//         );
+//         return count + (orderDate === todaysDateString ? 1 : 0);
+//       }, 0);
+//       console.log(
+//         "Today's total orders after placing new order:",
+//         TodaysTotalOrders.value
+//       );
+
+//       store.clearCart();
+//       receiptNumber.value = generateUniqueReceipt();
+
+//       snackbar.value = {
+//         show: true,
+//         text: "Order placed successfully!",
+//         color: "success",
+//       };
+//     } catch (error) {
+//       snackbar.value = {
+//         show: true,
+//         text: "Failed to place order",
+//         color: "error",
+//       };
+//     }
+//   }
+// };
 
 watch(
   () => product.value.file,
@@ -1382,6 +1883,431 @@ onMounted(async () => {
 .order-list-section::-webkit-scrollbar-thumb {
   background: #1b4332;
   border-radius: 10px;
+}
+.payment-mode-section {
+  background: #f8f6f2;
+  border-radius: 20px;
+  padding: 20px;
+  margin-top: 8px;
+}
+
+.payment-mode-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.header-icon {
+  color: #2d6a4f;
+}
+
+.payment-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-mode-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: white;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.payment-mode-card:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.payment-mode-card.active {
+  border-color: #2d6a4f;
+  background: #f0f9f4;
+}
+
+.mode-info {
+  flex: 1;
+}
+
+.mode-name {
+  font-weight: 600;
+  color: #1b4332;
+  margin-bottom: 2px;
+}
+
+.mode-desc {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.check-icon {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.payment-mode-card.active .check-icon {
+  opacity: 1;
+}
+
+/* Cash Payment Section */
+.cash-payment-section {
+  background: linear-gradient(135deg, #f8f6f2, #fff);
+  border-radius: 20px;
+  padding: 20px;
+  margin-top: 8px;
+  border: 1px solid #e5e0d5;
+}
+
+.cash-payment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1b4332;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e07a5f20;
+}
+
+.cash-input-group {
+  margin-bottom: 16px;
+}
+
+.cash-input-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.currency-input {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #e5e0d5;
+  transition: all 0.3s ease;
+}
+
+.currency-input:focus-within {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+}
+
+.currency-symbol {
+  padding: 12px 16px;
+  background: #f8f6f2;
+  border-radius: 10px 0 0 10px;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.cash-input-field {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-weight: 500;
+  background: transparent;
+  border-radius: 0 12px 12px 0;
+}
+
+.cash-input-field::-webkit-outer-spin-button,
+.cash-input-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.change-display {
+  background: linear-gradient(135deg, #2d6a4f, #1b4332);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.change-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 4px;
+}
+
+.change-amount {
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+}
+
+.insufficient-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fee2e2;
+  border-radius: 12px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #e07a5f;
+}
+
+/* M-Pesa Dialog */
+.mpesa-dialog {
+  border-radius: 32px !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mpesa-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.dialog-body {
+  padding: 24px;
+}
+
+.amount-display {
+  background: linear-gradient(135deg, #f0f9f4, #e8f5e9);
+  border-radius: 20px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.amount-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.amount-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #2d6a4f;
+}
+
+.phone-input {
+  display: flex;
+  align-items: center;
+  border: 2px solid #e5e0d5;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.phone-input:focus-within {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.1);
+}
+
+.country-code {
+  padding: 12px 16px;
+  background: #f8f6f2;
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.phone-field {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  outline: none;
+  font-size: 16px;
+}
+
+.input-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+
+.payment-instructions {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8f6f2;
+  border-radius: 16px;
+}
+
+.instruction-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.instruction-step {
+  width: 28px;
+  height: 28px;
+  background: #2d6a4f;
+  color: white;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.instruction-text {
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Debt Dialog */
+.debt-dialog {
+  text-align: center;
+  padding: 32px;
+  border-radius: 32px !important;
+}
+
+.debt-icon {
+  margin-bottom: 20px;
+}
+
+.debt-dialog h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 12px;
+}
+
+.debt-dialog p {
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+.debt-amount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #e07a5f;
+  margin: 16px 0;
+}
+
+.debt-warning {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff3e0;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #e07a5f;
+  margin: 16px 0;
+}
+
+/* Cash Confirm Dialog */
+.cash-confirm-dialog {
+  text-align: center;
+  padding: 32px;
+  border-radius: 32px !important;
+}
+
+.confirm-icon {
+  margin-bottom: 20px;
+}
+
+.cash-confirm-dialog h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 20px;
+}
+
+.payment-breakdown {
+  background: #f8f6f2;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.breakdown-row.change {
+  border-top: 1px solid #e5e0d5;
+  margin-top: 8px;
+  padding-top: 12px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #2d6a4f;
+}
+
+/* Dialog Actions */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 24px;
+}
+
+/* Animations */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .payment-mode-card {
+    padding: 12px;
+  }
+
+  .mode-name {
+    font-size: 14px;
+  }
+
+  .mode-desc {
+    font-size: 10px;
+  }
+
+  .amount-value {
+    font-size: 24px;
+  }
+
+  .change-amount {
+    font-size: 22px;
+  }
 }
 
 /* Responsive */
