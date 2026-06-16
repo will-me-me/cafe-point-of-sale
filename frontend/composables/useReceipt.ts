@@ -246,220 +246,451 @@ export function useReceipt() {
 
   // Generate HTML receipt
   const generateReceiptHTML = (data: ReceiptData): string => {
-    // ... (keep your existing HTML generation code)
     const isDebt = data.paymentMode === "debt";
     const isMpesa = data.paymentMode === "mpesa";
+    const showTable =
+      data.orderType === "dine-in" &&
+      !!data.tableNumber &&
+      data.tableNumber !== "N/A";
+    const hasAmountReceived = data.amountReceived != null;
+    const hasChangeDue = data.changeDue != null;
+    const statusClass =
+      data.paymentStatus === "completed" ? "completed" : "pending";
 
     return `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
           <title>Receipt - ${data.receiptNumber}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
           <style>
+            :root {
+              --paper: #fbf6ec;
+              --page-bg: #ece4d2;
+              --ink: #1b4332;
+              --ink-light: #2d6a4f;
+              --ember: #c1572f;
+              --espresso: #2c1810;
+              --mist: #847d6e;
+              --rule: #d9cdb2;
+            }
             * { margin: 0; padding: 0; box-sizing: border-box; }
+            html, body {
+              background: var(--page-bg);
+              font-family: 'IBM Plex Mono', 'Courier New', monospace;
+              color: var(--espresso);
+            }
             body {
-              font-family: 'Courier New', monospace;
-              background: #fff;
-              padding: 20px;
-              max-width: 300px;
-              margin: 0 auto;
+              padding: 32px 16px 48px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
             }
-            .receipt {
-              background: white;
-              padding: 20px;
-              border: 1px solid #e5e0d5;
-              border-radius: 8px;
+            .perforation {
+              width: 320px;
+              display: flex;
+              justify-content: space-between;
+              padding: 0 18px;
+              margin-bottom: 6px;
             }
-            .header {
-              text-align: center;
-              border-bottom: 2px dashed #e5e0d5;
-              padding-bottom: 16px;
-              margin-bottom: 16px;
+            .perforation span {
+              width: 11px;
+              height: 11px;
+              border-radius: 50%;
+              background: var(--page-bg);
+              box-shadow: inset 0 1px 2px rgba(44, 24, 16, .2);
             }
+            .ticket-wrap {
+              width: 320px;
+              filter: drop-shadow(0 16px 22px rgba(44, 24, 16, .3));
+            }
+            .ticket {
+              background: var(--paper);
+              padding: 26px 24px 16px;
+              border-radius: 6px 6px 0 0;
+            }
+            .ticket-tear {
+              height: 16px;
+              background: var(--paper);
+              clip-path: polygon(
+                0% 0%, 100% 0%,
+                100% 30%, 92.9% 100%, 85.7% 30%, 78.6% 100%, 71.4% 30%, 64.3% 100%,
+                57.1% 30%, 50% 100%, 42.9% 30%, 35.7% 100%, 28.6% 30%, 21.4% 100%,
+                14.3% 30%, 7.1% 100%, 0% 30%
+              );
+            }
+            .header { text-align: center; }
+            .shop-mark {
+              display: flex;
+              align-items: baseline;
+              justify-content: center;
+              gap: 7px;
+            }
+            .shop-mark .cup { font-size: 21px; }
             .shop-name {
-              font-size: 24px;
-              font-weight: 800;
-              color: #1b4332;
-              letter-spacing: -1px;
-              font-family: 'Playfair Display', serif;
+              font-family: 'Fraunces', serif;
+              font-weight: 700;
+              font-size: 25px;
+              letter-spacing: -0.5px;
+              color: var(--ink);
             }
-            .shop-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
-            .receipt-title { font-size: 12px; font-weight: 600; color: #e07a5f; letter-spacing: 2px; margin-top: 4px; }
-            .receipt-number { font-size: 16px; font-weight: 700; color: #1b4332; margin-top: 2px; }
-            .divider { border: none; border-top: 1px dashed #e5e0d5; margin: 12px 0; }
-            .info-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; color: #374151; }
-            .info-label { color: #6b7280; }
-            .items-header { font-weight: 700; font-size: 13px; color: #1b4332; border-bottom: 1px solid #e5e0d5; padding-bottom: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; }
-            .item-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; color: #374151; }
-            .item-name { flex: 1; }
-            .item-qty { margin: 0 8px; color: #6b7280; }
-            .item-price { font-weight: 600; }
-            .payment-summary { border-top: 2px dashed #e5e0d5; margin-top: 12px; padding-top: 12px; }
-            .summary-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: #374151; }
-            .summary-row.total { font-size: 18px; font-weight: 800; color: #1b4332; border-top: 2px solid #1b4332; margin-top: 4px; padding-top: 8px; }
-            .summary-row .amount { color: #e07a5f; }
-            .payment-detail { font-size: 11px; color: #6b7280; padding: 4px 0; border-top: 1px solid #e5e0d5; margin-top: 8px; }
-            .change-row { color: #2d6a4f; font-weight: 700; }
-            .footer { text-align: center; font-size: 11px; color: #6b7280; border-top: 2px dashed #e5e0d5; padding-top: 16px; margin-top: 16px; }
-            .footer .thanks { font-weight: 600; color: #1b4332; font-size: 14px; }
-            .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
-            .status-badge.completed { background: #2d6a4f20; color: #2d6a4f; }
-            .status-badge.pending { background: #e07a5f20; color: #e07a5f; }
-            .mpesa-detail { background: #f0f9f4; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 11px; }
-            .debt-note { background: #fff3e0; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 11px; color: #e07a5f; text-align: center; }
-            @media print { body { padding: 0; } .receipt { border: none; border-radius: 0; } .no-print { display: none; } }
+            .shop-sub {
+              font-size: 10px;
+              letter-spacing: 2px;
+              text-transform: uppercase;
+              color: var(--mist);
+              margin-top: 3px;
+            }
+            .eyebrow {
+              display: inline-block;
+              font-size: 10px;
+              font-weight: 600;
+              letter-spacing: 2.5px;
+              text-transform: uppercase;
+              color: var(--ember);
+              margin-top: 16px;
+            }
+            .receipt-number {
+              font-size: 14px;
+              font-weight: 600;
+              color: var(--ink);
+              margin-top: 4px;
+            }
+            .rule {
+              border: none;
+              border-top: 1px dashed var(--rule);
+              margin: 18px 0;
+            }
+            .rule.tight { margin: 4px 0 12px; }
+            .rule.heavy { border-top: 1.5px solid var(--ink); margin: 10px 0; }
+            .meta-row {
+              display: grid;
+              grid-template-columns: auto 1fr;
+              gap: 5px 12px;
+              font-size: 11px;
+            }
+            .meta-label {
+              color: var(--mist);
+              letter-spacing: .5px;
+              text-transform: uppercase;
+              font-size: 9.5px;
+              align-self: center;
+            }
+            .meta-value {
+              text-align: right;
+              font-weight: 500;
+            }
+            .items-head {
+              display: grid;
+              grid-template-columns: 1fr 30px 80px;
+              gap: 8px;
+              font-size: 10px;
+              letter-spacing: 1.5px;
+              text-transform: uppercase;
+              color: var(--ember);
+              font-weight: 600;
+              padding-bottom: 8px;
+              border-bottom: 1.5px solid var(--ink);
+            }
+            .items-head span:nth-child(2) { text-align: center; }
+            .items-head span:nth-child(3) { text-align: right; }
+            .item-row {
+              display: grid;
+              grid-template-columns: 1fr 30px 80px;
+              gap: 8px;
+              align-items: start;
+              font-size: 12px;
+              padding: 10px 0;
+              border-bottom: 1px dotted var(--rule);
+            }
+            .item-row:last-of-type { border-bottom: none; }
+            .item-name .unit-price {
+              display: block;
+              font-size: 10px;
+              color: var(--mist);
+              margin-top: 1px;
+            }
+            .item-qty { text-align: center; color: var(--mist); }
+            .item-amount {
+              text-align: right;
+              font-weight: 600;
+              font-variant-numeric: tabular-nums;
+            }
+            .summary-row {
+              display: flex;
+              justify-content: space-between;
+              font-size: 12px;
+              padding: 4px 0;
+            }
+            .summary-row .label { color: var(--mist); }
+            .summary-row.change .value { color: var(--ink-light); font-weight: 700; }
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: baseline;
+            }
+            .total-row .label {
+              font-family: 'Fraunces', serif;
+              font-weight: 700;
+              font-size: 15px;
+              color: var(--ink);
+              letter-spacing: .3px;
+            }
+            .total-row .value {
+              font-family: 'Fraunces', serif;
+              font-weight: 700;
+              font-size: 23px;
+              color: var(--ember);
+            }
+            .payment-row {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 11px;
+              margin-top: 16px;
+            }
+            .payment-method { font-weight: 600; letter-spacing: .5px; }
+            .status-badge {
+              display: inline-block;
+              padding: 3px 10px;
+              border-radius: 100px;
+              font-size: 9px;
+              font-weight: 700;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+            }
+            .status-badge.completed { background: rgba(45, 106, 79, .12); color: var(--ink-light); }
+            .status-badge.pending { background: rgba(193, 87, 47, .12); color: var(--ember); }
+            .note-block {
+              margin-top: 14px;
+              padding: 12px;
+              border-radius: 6px;
+              font-size: 11px;
+              line-height: 1.5;
+            }
+            .note-block.mpesa { background: rgba(45, 106, 79, .08); }
+            .note-block.mpesa .meta-row { font-size: 11px; }
+            .note-block.mpesa .confirm {
+              text-align: center;
+              margin-top: 8px;
+              padding-top: 8px;
+              border-top: 1px dashed rgba(45, 106, 79, .25);
+              font-size: 10px;
+              color: var(--ink-light);
+              font-weight: 600;
+              letter-spacing: .3px;
+            }
+            .note-block.debt {
+              background: rgba(193, 87, 47, .08);
+              text-align: center;
+              color: var(--espresso);
+            }
+            .note-block.debt strong {
+              display: block;
+              letter-spacing: 1.5px;
+              text-transform: uppercase;
+              font-size: 10px;
+              color: var(--ember);
+              margin-bottom: 5px;
+            }
+            .footer { text-align: center; margin-top: 22px; }
+            .footer .thanks {
+              font-family: 'Fraunces', serif;
+              font-style: italic;
+              font-weight: 600;
+              font-size: 15px;
+              color: var(--ink);
+            }
+            .footer .visit {
+              font-size: 10px;
+              color: var(--mist);
+              margin-top: 5px;
+              letter-spacing: .3px;
+            }
+            .footer .system-note {
+              font-size: 8.5px;
+              color: var(--mist);
+              opacity: .75;
+              margin-top: 12px;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+            }
+            .print-btn-wrap { margin-top: 24px; text-align: center; }
+            .print-btn {
+              padding: 11px 30px;
+              background: var(--ink);
+              color: var(--paper);
+              border: none;
+              border-radius: 100px;
+              cursor: pointer;
+              font-family: 'IBM Plex Mono', monospace;
+              font-size: 12px;
+              font-weight: 600;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+            }
+            .print-btn:hover { background: var(--ink-light); }
+            @media print {
+              html, body { background: var(--paper); padding: 0; }
+              .perforation span { box-shadow: none; }
+              .no-print { display: none; }
+              .ticket-wrap { filter: none; width: auto; }
+            }
           </style>
         </head>
         <body>
-          <div class="receipt">
-            <div class="header">
-              <div class="shop-name">☕ BABADEACON</div>
-              <div class="shop-sub">Premium Coffee & Snacks</div>
-              <div class="receipt-title">PURCHASE RECEIPT</div>
-              <div class="receipt-number">${data.receiptNumber}</div>
-            </div>
+          <div class="perforation">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
 
-            <div class="info-row">
-              <span class="info-label">Date</span>
-              <span>${data.date} ${data.time}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Order Type</span>
-              <span>${data.orderType.replace("-", " ").toUpperCase()}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Customer</span>
-              <span>${data.customerName}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Table</span>
-              <span>${data.tableNumber}</span>
-            </div>
-            <div class="info-row">
-              <span class="info-label">Cashier</span>
-              <span>${data.cashier}</span>
-            </div>
+          <div class="ticket-wrap">
+            <div class="ticket">
+              <div class="header">
+                <div class="shop-mark">
+                  <span class="cup">☕</span>
+                  <span class="shop-name">Babadeacon</span>
+                </div>
+                <div class="shop-sub">Coffee &amp; Snacks</div>
+                <div class="eyebrow">Purchase Receipt</div>
+                <div class="receipt-number">№ ${data.receiptNumber}</div>
+              </div>
 
-            <hr class="divider">
+              <hr class="rule">
 
-            <div class="items-header">
-              <span>Item</span>
-              <span>Qty</span>
-              <span>Price</span>
-              <span>Total Price</span>
-            </div>
-            ${data.items
-              .map(
-                (item) => `
+              <div class="meta-row">
+                <span class="meta-label">Date</span>
+                <span class="meta-value">${data.date} · ${data.time}</span>
+                <span class="meta-label">Order</span>
+                <span class="meta-value">${data.orderType
+                  .replace("-", " ")
+                  .toUpperCase()}</span>
+                ${
+                  showTable
+                    ? `
+                <span class="meta-label">Table</span>
+                <span class="meta-value">${data.tableNumber}</span>`
+                    : ""
+                }
+                <span class="meta-label">Customer</span>
+                <span class="meta-value">${data.customerName}</span>
+                <span class="meta-label">Cashier</span>
+                <span class="meta-value">${data.cashier}</span>
+              </div>
+
+              <hr class="rule">
+
+              <div class="items-head">
+                <span>Item</span>
+                <span>Qty</span>
+                <span>Amount</span>
+              </div>
+              ${data.items
+                .map(
+                  (item) => `
               <div class="item-row">
-                <span class="item-name">${item.name}</span>
+                <span class="item-name">${
+                  item.name
+                }<span class="unit-price">KSH ${item.unitPrice.toFixed(
+                    2
+                  )} each</span></span>
                 <span class="item-qty">${item.quantity}</span>
-                <span class="item-price">${item.unitPrice.toFixed(2)}</span>
-                <span class="item-price">KSH ${item.total.toFixed(2)}</span>
-              </div>
-            `
-              )
-              .join("")}
+                <span class="item-amount">${item.total.toFixed(2)}</span>
+              </div>`
+                )
+                .join("")}
 
-            <div class="payment-summary">
+              <hr class="rule tight">
+
               <div class="summary-row">
-                <span>Subtotal</span>
-                <span>KSH ${data.subtotal.toFixed(2)}</span>
+                <span class="label">Subtotal</span>
+                <span class="value">KSH ${data.subtotal.toFixed(2)}</span>
               </div>
               <div class="summary-row">
-                <span>Tax (10%)</span>
-                <span>KSH ${data.tax.toFixed(2)}</span>
+                <span class="label">Tax (10%)</span>
+                <span class="value">KSH ${data.tax.toFixed(2)}</span>
               </div>
               ${
-                data.amountReceived
+                hasAmountReceived
                   ? `
-                <div class="summary-row">
-                  <span>Amount Received</span>
-                  <span>KSH ${data.amountReceived.toFixed(2)}</span>
-                </div>
-              `
+              <div class="summary-row">
+                <span class="label">Amount Received</span>
+                <span class="value">KSH ${data.amountReceived!.toFixed(
+                  2
+                )}</span>
+              </div>`
                   : ""
               }
               ${
-                data.changeDue
+                hasChangeDue
                   ? `
-                <div class="summary-row change-row">
-                  <span>Change Due</span>
-                  <span>KSH ${data.changeDue.toFixed(2)}</span>
-                </div>
-              `
+              <div class="summary-row change">
+                <span class="label">Change Due</span>
+                <span class="value">KSH ${data.changeDue!.toFixed(2)}</span>
+              </div>`
                   : ""
               }
-              <div class="summary-row total">
-                <span>TOTAL</span>
-                <span class="amount">KSH ${data.total.toFixed(2)}</span>
-              </div>
-            </div>
 
-            <div class="payment-detail">
-              <div class="info-row">
-                <span class="info-label">Payment Method</span>
-                <span>${data.paymentMode.toUpperCase()}</span>
+              <hr class="rule heavy">
+
+              <div class="total-row">
+                <span class="label">Total</span>
+                <span class="value">KSH ${data.total.toFixed(2)}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">Status</span>
-                <span class="status-badge ${data.paymentStatus}">${
+
+              <div class="payment-row">
+                <span class="meta-label">Payment</span>
+                <span class="payment-method">${data.paymentMode.toUpperCase()}</span>
+                <span class="status-badge ${statusClass}">${
       data.paymentStatus
     }</span>
               </div>
-            </div>
 
-            ${
-              isMpesa
-                ? `
-              <div class="mpesa-detail">
-                <div class="info-row">
-                  <span>M-Pesa Number</span>
-                  <span>${data.mpesaNumber || "N/A"}</span>
+              ${
+                isMpesa
+                  ? `
+              <div class="note-block mpesa">
+                <div class="meta-row">
+                  <span class="meta-label">M-Pesa No.</span>
+                  <span class="meta-value">${data.mpesaNumber || "N/A"}</span>
+                  ${
+                    data.mpesaReceipt
+                      ? `
+                  <span class="meta-label">M-Pesa Code</span>
+                  <span class="meta-value">${data.mpesaReceipt}</span>`
+                      : ""
+                  }
                 </div>
-                ${
-                  data.mpesaReceipt
-                    ? `
-                  <div class="info-row">
-                    <span>M-Pesa Receipt</span>
-                    <span>${data.mpesaReceipt}</span>
-                  </div>
-                `
-                    : ""
-                }
-                <div style="margin-top:4px;font-size:10px;color:#6b7280;text-align:center;">
-                  ✅ Payment confirmed via M-Pesa
-                </div>
-              </div>
-            `
-                : ""
-            }
+                <div class="confirm">✓ Payment confirmed via M-Pesa</div>
+              </div>`
+                  : ""
+              }
 
-            ${
-              isDebt
-                ? `
-              <div class="debt-note">
-                <strong>📋 DEBT ORDER</strong><br>
-                Payment due in 7 days<br>
-                Please settle this amount to clear outstanding balance.
-              </div>
-            `
-                : ""
-            }
+              ${
+                isDebt
+                  ? `
+              <div class="note-block debt">
+                <strong>Debt Order</strong>
+                Payment due within 7 days. Please settle this balance to clear your account.
+              </div>`
+                  : ""
+              }
 
-            <div class="footer">
-              <div class="thanks">Thank you for your order!</div>
-              <div style="margin-top:4px;">Visit us again at BABADEACON COFFEE</div>
-              <div style="margin-top:4px;font-size:10px;color:#9ca3af;">
-                This is a system generated receipt
+              <div class="footer">
+                <div class="thanks">Thank you for your order</div>
+                <div class="visit">Visit us again at Babadeacon Coffee</div>
+                <div class="system-note">System-generated receipt</div>
               </div>
             </div>
+            <div class="ticket-tear"></div>
           </div>
-          <div style="text-align:center;margin-top:16px;" class="no-print">
-            <button onclick="window.print()" style="padding:10px 30px;background:#1b4332;color:white;border:none;border-radius:8px;cursor:pointer;font-size:16px;">
-              🖨️ Print Receipt
-            </button>
+
+          <div class="print-btn-wrap no-print">
+            <button class="print-btn" onclick="window.print()">Print Receipt</button>
           </div>
         </body>
       </html>
