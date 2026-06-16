@@ -18,7 +18,13 @@ export default defineNuxtConfig({
     },
   },
   build: {
-    transpile: ["vuetify", "chart.js", "vue-chartjs"],
+    transpile: [
+      "vuetify",
+      "chart.js",
+      "vue-chartjs",
+      "@point-of-sale/receipt-printer-encoder",
+      "esc-pos-encoder",
+    ],
   },
   plugins: [{ src: "~/plugins/chart.client.ts", mode: "client" }],
   compatibilityDate: "2025-07-15",

@@ -12,7 +12,9 @@
   "dependencies": {
     "@mdi/font": "^7.4.47",
     "@pinia/nuxt": "^0.11.2",
+    "@point-of-sale/receipt-printer-encoder": "^3.0.3",
     "chart.js": "^4.5.1",
+    "esc-pos-encoder": "^3.0.0",
     "nuxt": "^3.19.2",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.5.0",
