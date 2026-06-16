@@ -1,4 +1,3 @@
-<!-- frontend/pages/orders/index.vue -->
 <template>
   <div class="orders-container">
     <!-- Header -->
@@ -9,9 +8,18 @@
         <p class="page-subtitle">View and manage all customer orders</p>
       </div>
       <div class="header-actions">
-        <v-btn variant="outlined" class="export-btn">
+        <v-btn variant="outlined" class="export-btn" @click="exportOrders">
           <v-icon start>mdi-export</v-icon>
           Export
+        </v-btn>
+        <v-btn
+          v-if="hasDebtOrders"
+          color="#E07A5F"
+          class="debt-btn"
+          @click="showDebtManagement = true"
+        >
+          <v-icon start>mdi-account-cash</v-icon>
+          Manage Debts
         </v-btn>
       </div>
     </div>
@@ -33,10 +41,17 @@
           <option value="take-away">📦 Take Away</option>
           <option value="order-online">📱 Online</option>
         </select>
+        <select v-model="selectedPaymentMode" class="filter-select">
+          <option value="">All Payment Methods</option>
+          <option value="cash">💵 Cash</option>
+          <option value="mpesa">📱 M-Pesa</option>
+          <option value="debt">📋 Debt</option>
+        </select>
         <select v-model="selectedStatus" class="filter-select">
           <option value="">All Status</option>
           <option value="completed">✅ Completed</option>
           <option value="preparing">🔄 Preparing</option>
+          <option value="pending">⏳ Pending</option>
           <option value="cancelled">❌ Cancelled</option>
         </select>
         <input type="date" v-model="dateFilter" class="date-picker" />
@@ -72,6 +87,16 @@
           <div class="summary-label">Average Order</div>
         </div>
       </div>
+      <div class="summary-card" style="background: #fff3e0">
+        <div class="summary-icon" style="background: #e07a5f30">
+          <v-icon color="#E07A5F">mdi-account-cash</v-icon>
+        </div>
+        <div class="summary-info">
+          <div class="summary-value">ksh{{ totalDebt }}</div>
+          <div class="summary-label">Total Outstanding Debt</div>
+          <div class="summary-sub">{{ debtCount }} debt orders</div>
+        </div>
+      </div>
     </div>
 
     <!-- Orders Table -->
@@ -86,12 +111,21 @@
               <th>Items</th>
               <th>Total</th>
               <th>Date</th>
+              <th>Payment</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="order in paginatedOrders" :key="order.id">
+            <tr
+              v-for="order in paginatedOrders"
+              :key="order.id"
+              :class="{
+                'debt-row':
+                  order.paymentMode === 'debt' &&
+                  order.paymentStatus === 'pending',
+              }"
+            >
               <td class="receipt-cell">{{ order.receiptNumber }}</td>
               <td>{{ order.customerName }}</td>
               <td>
@@ -103,8 +137,19 @@
               <td class="amount-cell">ksh{{ order.total }}</td>
               <td>{{ formatDate(order.created_at) }}</td>
               <td>
-                <span class="status-badge" :class="order.status || 'completed'">
-                  {{ order.status || "completed" }}
+                <span class="payment-badge" :class="order.paymentMode">
+                  <v-icon size="12" class="mr-1">
+                    {{ getPaymentIcon(order.paymentMode) }}
+                  </v-icon>
+                  {{ order.paymentMode }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="status-badge"
+                  :class="order.paymentStatus || 'completed'"
+                >
+                  {{ order.paymentStatus || "completed" }}
                 </span>
               </td>
               <td>
@@ -124,6 +169,19 @@
                     @click="printReceipt(order)"
                   >
                     <v-icon size="18">mdi-printer</v-icon>
+                  </v-btn>
+                  <v-btn
+                    v-if="
+                      order.paymentMode === 'debt' &&
+                      order.paymentStatus === 'pending'
+                    "
+                    icon
+                    size="small"
+                    variant="text"
+                    color="#2D6A4F"
+                    @click="markDebtAsPaid(order)"
+                  >
+                    <v-icon size="18">mdi-check-circle</v-icon>
                   </v-btn>
                 </div>
               </td>
@@ -169,7 +227,10 @@
 
     <!-- Order Details Dialog -->
     <v-dialog v-model="detailsDialog" max-width="800">
-      <v-card class="order-details-dialog">
+      <v-card
+        class="order-details-dialog"
+        :class="{ 'debt-dialog': selectedOrder?.paymentMode === 'debt' }"
+      >
         <div class="dialog-header">
           <div>
             <div class="receipt-badge">Order Details</div>
@@ -201,6 +262,51 @@
               {{ formatDate(selectedOrder?.created_at) }}
             </div>
           </div>
+          <div class="info-card">
+            <div class="info-label">Payment Method</div>
+            <div class="info-value">
+              <span class="payment-badge" :class="selectedOrder?.paymentMode">
+                <v-icon size="14" class="mr-1">
+                  {{ getPaymentIcon(selectedOrder?.paymentMode) }}
+                </v-icon>
+                {{ selectedOrder?.paymentMode }}
+              </span>
+            </div>
+          </div>
+          <div class="info-card">
+            <div class="info-label">Payment Status</div>
+            <div class="info-value">
+              <span class="status-badge" :class="selectedOrder?.paymentStatus">
+                {{ selectedOrder?.paymentStatus || "completed" }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Debt Order Note -->
+        <div
+          v-if="
+            selectedOrder?.paymentMode === 'debt' &&
+            selectedOrder?.paymentStatus === 'pending'
+          "
+          class="debt-notice"
+        >
+          <v-icon size="24" color="#E07A5F">mdi-alert-circle</v-icon>
+          <div>
+            <strong>Debt Order</strong>
+            <p>
+              This order is recorded as debt. Please collect payment from the
+              customer.
+            </p>
+            <v-btn
+              size="small"
+              color="#2D6A4F"
+              @click="markDebtAsPaid(selectedOrder)"
+            >
+              <v-icon start size="16">mdi-check</v-icon>
+              Mark as Paid
+            </v-btn>
+          </div>
         </div>
 
         <div class="items-list">
@@ -217,18 +323,9 @@
                 <span>{{ item.temp || "Hot" }}</span>
               </div>
             </div>
-
-            <div
-              class="item-detail-qty text-overline"
-              style="color: #6b7280; font-size: 11px; font-weight: 600"
-            >
-              <span
-                style="color: #6b7280; font-size: 11px; font-weight: 600"
-                class="text-overline"
-                >ksh{{ item.price }}</span
-              >
-              x
-              {{ item.quantity }}
+            <div class="item-detail-qty">
+              <span class="item-unit-price">ksh{{ item.price }}</span>
+              x {{ item.quantity }}
             </div>
             <div class="item-detail-price">
               ksh{{ (item.price * item.quantity).toFixed(2) }}
@@ -249,6 +346,15 @@
             <span>Total</span>
             <span>ksh{{ selectedOrder?.total }}</span>
           </div>
+          <div
+            v-if="selectedOrder?.paymentMode === 'debt'"
+            class="summary-row debt-note-row"
+          >
+            <span>Debt Status</span>
+            <span class="status-badge" :class="selectedOrder?.paymentStatus">
+              {{ selectedOrder?.paymentStatus || "pending" }}
+            </span>
+          </div>
         </div>
 
         <div class="dialog-actions">
@@ -256,10 +362,127 @@
             <v-icon start>mdi-printer</v-icon>
             Print Receipt
           </v-btn>
+          <v-btn
+            v-if="
+              selectedOrder?.paymentMode === 'debt' &&
+              selectedOrder?.paymentStatus === 'pending'
+            "
+            color="#2D6A4F"
+            @click="markDebtAsPaid(selectedOrder)"
+          >
+            <v-icon start>mdi-check</v-icon>
+            Mark as Paid
+          </v-btn>
           <v-btn color="#2D6A4F" @click="detailsDialog = false">Close</v-btn>
         </div>
       </v-card>
     </v-dialog>
+
+    <!-- Debt Management Dialog -->
+    <v-dialog v-model="showDebtManagement" max-width="900">
+      <v-card class="debt-management-dialog">
+        <div class="dialog-header">
+          <div>
+            <div class="receipt-badge">Debt Management</div>
+            <h2>Outstanding Debts</h2>
+            <p class="subtitle">Manage and track all pending debt orders</p>
+          </div>
+          <v-btn icon variant="text" @click="showDebtManagement = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+
+        <div class="debt-summary">
+          <div class="debt-stat">
+            <div class="debt-stat-value">{{ debtOrders.length }}</div>
+            <div class="debt-stat-label">Pending Debts</div>
+          </div>
+          <div class="debt-stat">
+            <div class="debt-stat-value">ksh{{ totalDebt }}</div>
+            <div class="debt-stat-label">Total Outstanding</div>
+          </div>
+          <div class="debt-stat">
+            <div class="debt-stat-value">{{ uniqueDebtCustomers.length }}</div>
+            <div class="debt-stat-label">Customers with Debt</div>
+          </div>
+        </div>
+
+        <div class="debt-list">
+          <div v-for="order in debtOrders" :key="order.id" class="debt-item">
+            <div class="debt-item-info">
+              <div class="debt-customer">
+                <div class="debt-customer-name">{{ order.customerName }}</div>
+                <div class="debt-order-ref">{{ order.receiptNumber }}</div>
+              </div>
+              <div class="debt-item-details">
+                <div class="debt-amount">ksh{{ order.total }}</div>
+                <div class="debt-date">{{ formatDate(order.created_at) }}</div>
+              </div>
+            </div>
+            <div class="debt-item-actions">
+              <v-btn
+                size="small"
+                variant="text"
+                @click="viewOrderDetails(order)"
+              >
+                <v-icon size="16">mdi-eye</v-icon>
+              </v-btn>
+              <v-btn
+                size="small"
+                color="#2D6A4F"
+                @click="markDebtAsPaid(order)"
+              >
+                <v-icon start size="16">mdi-check</v-icon>
+                Mark Paid
+              </v-btn>
+            </div>
+          </div>
+          <div v-if="debtOrders.length === 0" class="no-debts">
+            <v-icon size="48" color="#E5E7EB">mdi-check-circle</v-icon>
+            <p>No outstanding debts! 🎉</p>
+            <span>All debt orders have been cleared.</span>
+          </div>
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- Mark Debt as Paid Confirmation Dialog -->
+    <v-dialog v-model="showPaidConfirmation" max-width="400">
+      <v-card class="confirm-dialog">
+        <div class="confirm-icon">
+          <v-icon size="64" color="#2D6A4F">mdi-check-circle</v-icon>
+        </div>
+        <h3>Mark Debt as Paid?</h3>
+        <p>
+          Confirm that <strong>{{ selectedOrder?.customerName }}</strong> has
+          paid <strong>ksh{{ selectedOrder?.total }}</strong> for order
+          <strong>{{ selectedOrder?.receiptNumber }}</strong>
+        </p>
+        <div class="confirm-actions">
+          <v-btn variant="text" @click="showPaidConfirmation = false"
+            >Cancel</v-btn
+          >
+          <v-btn color="#2D6A4F" @click="confirmMarkAsPaid"
+            >Confirm Payment</v-btn
+          >
+        </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- Success Snackbar -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :timeout="3000"
+      :color="snackbar.color"
+      location="top"
+      class="custom-snackbar"
+    >
+      <v-icon start>{{ snackbar.icon }}</v-icon>
+      {{ snackbar.text }}
+      <template v-slot:actions>
+        <v-btn variant="text" icon="mdi-close" @click="snackbar.show = false" />
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
@@ -275,14 +498,43 @@ definePageMeta({
 const store = usePosStore();
 const searchQuery = ref("");
 const selectedType = ref("");
+const selectedPaymentMode = ref("");
 const selectedStatus = ref("");
 const dateFilter = ref("");
 const itemsPerPage = ref(10);
 const currentPage = ref(1);
 const detailsDialog = ref(false);
+const showDebtManagement = ref(false);
+const showPaidConfirmation = ref(false);
 const selectedOrder = ref(null);
 
-const orders = computed(() => store.AllOrders);
+const snackbar = ref({
+  show: false,
+  text: "",
+  color: "success",
+  icon: "mdi-check-circle",
+});
+
+const orders = computed(() => store.AllOrders || []);
+
+// Debt orders filter
+const debtOrders = computed(() => {
+  return orders.value.filter(
+    (order) => order.paymentMode === "debt" && order.paymentStatus === "pending"
+  );
+});
+
+const hasDebtOrders = computed(() => debtOrders.value.length > 0);
+const totalDebt = computed(() => {
+  return debtOrders.value
+    .reduce((sum, order) => sum + order.total, 0)
+    .toFixed(2);
+});
+const debtCount = computed(() => debtOrders.value.length);
+const uniqueDebtCustomers = computed(() => {
+  const customers = new Set(debtOrders.value.map((o) => o.customerName));
+  return Array.from(customers);
+});
 
 const filteredOrders = computed(() => {
   let filtered = [...orders.value];
@@ -305,6 +557,18 @@ const filteredOrders = computed(() => {
     );
   }
 
+  if (selectedPaymentMode.value) {
+    filtered = filtered.filter(
+      (order) => order.paymentMode === selectedPaymentMode.value
+    );
+  }
+
+  if (selectedStatus.value) {
+    filtered = filtered.filter(
+      (order) => order.paymentStatus === selectedStatus.value
+    );
+  }
+
   if (dateFilter.value) {
     filtered = filtered.filter((order) => {
       const orderDate = new Date(order.created_at).toISOString().split("T")[0];
@@ -317,13 +581,17 @@ const filteredOrders = computed(() => {
 
 const totalRevenue = computed(() => {
   return filteredOrders.value
+    .filter((order) => order.paymentStatus === "completed")
     .reduce((sum, order) => sum + order.total, 0)
     .toFixed(2);
 });
 
 const avgOrderValue = computed(() => {
-  if (filteredOrders.value.length === 0) return "0";
-  return (totalRevenue.value / filteredOrders.value.length).toFixed(2);
+  const completedOrders = filteredOrders.value.filter(
+    (order) => order.paymentStatus === "completed"
+  );
+  if (completedOrders.length === 0) return "0";
+  return (parseFloat(totalRevenue.value) / completedOrders.length).toFixed(2);
 });
 
 const totalPages = computed(() =>
@@ -335,6 +603,15 @@ const paginatedOrders = computed(() => {
   const end = start + itemsPerPage.value;
   return filteredOrders.value.slice(start, end);
 });
+
+const getPaymentIcon = (mode: string) => {
+  const icons: Record<string, string> = {
+    cash: "mdi-cash",
+    mpesa: "mdi-cellphone",
+    debt: "mdi-account-cash",
+  };
+  return icons[mode] || "mdi-help-circle";
+};
 
 const formatDate = (date) => {
   if (!date) return "N/A";
@@ -355,8 +632,96 @@ const viewOrderDetails = (order) => {
 };
 
 const printReceipt = (order) => {
-  // Print receipt logic
-  window.print();
+  // Use the receipt composable
+  const { printReceipt } = useReceipt();
+  printReceipt(order);
+};
+
+const markDebtAsPaid = (order) => {
+  selectedOrder.value = order;
+  showPaidConfirmation.value = true;
+};
+
+const confirmMarkAsPaid = async () => {
+  if (!selectedOrder.value) return;
+
+  try {
+    // Update the order status in the database
+    // Assuming you have an updateOrderStatus method in your store
+    // const updated = await store.updateOrderStatus(selectedOrder.value.id, {
+    //   paymentStatus: 'completed',
+    //   paymentMode: 'debt',
+    //   clearedAt: new Date().toISOString()
+    // });
+
+    // For demo, update locally
+    const orderIndex = store.AllOrders.findIndex(
+      (o) => o.id === selectedOrder.value.id
+    );
+    if (orderIndex !== -1) {
+      store.AllOrders[orderIndex].paymentStatus = "completed";
+      store.AllOrders[orderIndex].clearedAt = new Date().toISOString();
+      store.AllOrders[orderIndex].clearedBy = "Cashier";
+    }
+
+    showPaidConfirmation.value = false;
+    detailsDialog.value = false;
+    showDebtManagement.value = false;
+
+    snackbar.value = {
+      show: true,
+      text: `Debt of ksh${selectedOrder.value.total} from ${selectedOrder.value.customerName} marked as paid!`,
+      color: "success",
+      icon: "mdi-check-circle",
+    };
+
+    selectedOrder.value = null;
+  } catch (error) {
+    console.error("Error marking debt as paid:", error);
+    snackbar.value = {
+      show: true,
+      text: "Failed to mark debt as paid. Please try again.",
+      color: "error",
+      icon: "mdi-alert-circle",
+    };
+  }
+};
+
+const exportOrders = () => {
+  // Export orders as CSV
+  const headers = [
+    "Receipt #",
+    "Customer",
+    "Order Type",
+    "Items",
+    "Total",
+    "Payment Method",
+    "Status",
+    "Date",
+  ];
+  const rows = filteredOrders.value.map((order) => [
+    order.receiptNumber,
+    order.customerName,
+    order.orderType,
+    order.items.length,
+    order.total,
+    order.paymentMode,
+    order.paymentStatus,
+    new Date(order.created_at).toLocaleString(),
+  ]);
+
+  let csv = headers.join(",") + "\n";
+  rows.forEach((row) => {
+    csv += row.join(",") + "\n";
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `orders_${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
 onMounted(async () => {
@@ -729,5 +1094,245 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+.debt-row {
+  background: #fff8f0;
+  border-left: 3px solid #e07a5f;
+}
+
+.debt-row:hover {
+  background: #fff3e0;
+}
+
+.payment-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.payment-badge.cash {
+  background: #2d6a4f20;
+  color: #2d6a4f;
+}
+
+.payment-badge.mpesa {
+  background: #6b4e7120;
+  color: #6b4e71;
+}
+
+.payment-badge.debt {
+  background: #e07a5f20;
+  color: #e07a5f;
+}
+
+.debt-btn {
+  text-transform: none;
+  border-radius: 40px;
+  background: #fff3e0;
+  color: #e07a5f;
+}
+
+.debt-btn:hover {
+  background: #ffe8cc;
+}
+
+.debt-dialog {
+  border: 2px solid #e07a5f;
+}
+
+.debt-notice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #fff3e0;
+  border-radius: 16px;
+  margin: 0 24px 16px 24px;
+  border: 1px solid #e07a5f40;
+}
+
+.debt-notice p {
+  margin: 4px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.debt-notice strong {
+  color: #1b4332;
+  font-size: 16px;
+}
+
+.summary-sub {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+/* Debt Management Dialog */
+.debt-management-dialog {
+  border-radius: 32px !important;
+  overflow: hidden;
+}
+
+.debt-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px 24px;
+}
+
+.debt-stat {
+  background: #f8f6f2;
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.debt-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1b4332;
+}
+
+.debt-stat-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.debt-list {
+  padding: 0 24px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.debt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8f6f2;
+  border-radius: 16px;
+  border-left: 4px solid #e07a5f;
+  transition: all 0.3s ease;
+}
+
+.debt-item:hover {
+  background: #f0ede5;
+}
+
+.debt-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.debt-customer-name {
+  font-weight: 700;
+  color: #1b4332;
+  font-size: 16px;
+}
+
+.debt-order-ref {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.debt-item-details {
+  text-align: right;
+}
+
+.debt-amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e07a5f;
+}
+
+.debt-date {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.debt-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.no-debts {
+  text-align: center;
+  padding: 48px;
+  color: #6b7280;
+}
+
+.no-debts p {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1b4332;
+  margin-top: 16px;
+}
+
+/* Confirm Dialog */
+.confirm-dialog {
+  text-align: center;
+  padding: 32px;
+  border-radius: 32px !important;
+}
+
+.confirm-icon {
+  margin-bottom: 20px;
+}
+
+.confirm-dialog h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 12px;
+}
+
+.confirm-dialog p {
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.summary-row.debt-note-row {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 8px;
+  padding-top: 12px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .debt-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .debt-item {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .debt-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .debt-notice {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 </style>
