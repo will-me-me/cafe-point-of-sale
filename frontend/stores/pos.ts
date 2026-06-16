@@ -34,6 +34,8 @@ interface Oders {
   tax: number;
   total: number;
   date: string;
+  paymentMode: string;
+  paymentStatus: string;
 }
 import { useAuthStore } from "./auth";
 
@@ -181,6 +183,8 @@ export const usePosStore = defineStore("pos", {
           subtotal: orderData.subtotal,
           tax: orderData.tax,
           total: orderData.total,
+          paymentMode: orderData.paymentMode,
+          paymentStatus: orderData.paymentStatus,
         };
 
         const res = await fetch("http://127.0.0.1:8000/orders/", {
