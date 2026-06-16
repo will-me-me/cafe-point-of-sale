@@ -18,6 +18,8 @@ def order_entity(order) -> dict:
         "total": order["total"],
         "receiptNumber": order["receiptNumber"],
         "created_at": order["created_at"],
+        "paymentMode":order.get("paymentMode"),
+        "paymentStatus":order.get("paymentStatus"),
     }
 
 
