@@ -604,6 +604,14 @@ const activityMeta: Record<string, { icon: string; color: string }> = {
     icon: "mdi-coffee",
     color: "#E07A5F",
   },
+  user_deleted: {
+    icon: "mdi-account-remove",
+    color: "#E07A5F",
+  },
+  user_status_changed: {
+    icon: "mdi-account-cancel",
+    color: "#E07A5F",
+  },
 };
 const recentActivities = computed(() => {
   return [...AllLogs.value]
