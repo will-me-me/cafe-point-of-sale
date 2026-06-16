@@ -8,6 +8,8 @@ class OrderItem(BaseModel):
     name: str
     price: float
     quantity: int
+    
+    
 
 
 # Data received from frontend
@@ -21,6 +23,9 @@ class OrderCreate(BaseModel):
     total: float
     receiptNumber: str
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    paymentMode: Optional[str] = None  # e.g., "Cash", "Card", "Online", "mpesa"
+    paymentStatus: Optional[str] = None  # e.g., "Paid", "Pending", "Failed"
+    
 
 
 # Database representation
