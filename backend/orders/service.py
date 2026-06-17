@@ -1,9 +1,12 @@
+from fastapi import HTTPException
 from database import db
 from bson import ObjectId
 from orders.schema import Order
 from datetime import datetime
 from typing import List
 from orders.schema import OrderCreate
+from users.schema import ActivityLog
+from users.services import create_log
 
 
 def order_entity(order) -> dict:
@@ -42,3 +45,28 @@ async def get_orders() -> List[Order]:
     formatted_orders = order_list_entity(orders)
     # Validate and return as Pydantic models
     return [Order(**o) for o in formatted_orders]
+
+async def update_debt_order(order_id: str, payment_status: str, current_user: dict) -> Order:
+    order = await db["orders"].find_one({"_id": ObjectId(order_id)})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    await db["orders"].update_one(
+        {"_id": ObjectId(order_id)},
+        {"$set": {"paymentStatus": payment_status}}
+    )
+    
+    updated_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
+    name = current_user.get("name", "Unknown User")
+    await create_log( 
+        ActivityLog(
+            user_id=str(current_user["_id"]),
+            action="debt_payment_updated",
+            message=f"{name} Updated payment status for debt order {order_id} to {payment_status}.",
+            user_email=current_user.get("email"),
+            user_name=current_user.get("name"),
+        ),
+        current_user=current_user
+    )
+    
+    return Order.model_validate(order_entity(updated_order))
