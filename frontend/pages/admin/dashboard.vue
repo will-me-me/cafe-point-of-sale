@@ -612,6 +612,10 @@ const activityMeta: Record<string, { icon: string; color: string }> = {
     icon: "mdi-account-cancel",
     color: "#E07A5F",
   },
+  debt_payment_updated: {
+    icon: "mdi-currency-usd",
+    color: "#2D6A4F",
+  },
 };
 const recentActivities = computed(() => {
   return [...AllLogs.value]
