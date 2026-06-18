@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@types/chart.js": "^2.9.41",
+    "baseline-browser-mapping": "^2.10.37",
     "vite-plugin-vuetify": "^2.1.2",
     "vuetify": "^3.10.4"
   }
