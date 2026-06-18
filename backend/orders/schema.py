@@ -1,6 +1,20 @@
+from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
+
+class PaymentMode(str, Enum):
+    CASH = "cash"
+    MPESA = "mpesa"
+    DEBT = "debt"
+    CARD = "card"  # For future expansion
+
+class PaymentStatus(str, Enum):
+    PAID = "completed"
+    PENDING = "pending"
+    PARTIAL = "partial"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
 
 
 # Each item in the cart
