@@ -591,7 +591,7 @@
     </div>
 
     <!-- FAB for adding products (Admin only) -->
-    <v-fab
+    <!-- <v-fab
       icon="mdi-plus"
       color="#E07A5F"
       location="bottom start"
@@ -600,6 +600,58 @@
       @click="dialog = true"
       class="fab-add-product"
       v-if="authStore.isAdmin"
+    /> -->
+    <v-fab
+      icon="mdi-plus"
+      color="#E07A5F"
+      location="bottom start"
+      size="large"
+      app
+      @click="showFABMenu = true"
+      class="fab-add-product"
+      v-if="authStore.isAdmin"
+    />
+
+    <!-- FAB Menu -->
+    <v-speed-dial
+      v-model="showFABMenu"
+      direction="top"
+      transition="slide-y-reverse-transition"
+      location="bottom start"
+      class="fab-menu"
+      v-if="authStore.isAdmin"
+    >
+      <template v-slot:activator>
+        <v-btn v-model="showFABMenu" color="#E07A5F" size="large" icon>
+          <v-icon>mdi-plus</v-icon>
+        </v-btn>
+      </template>
+      <v-btn
+        key="1"
+        color="#2D6A4F"
+        size="small"
+        icon
+        @click="openAddProductDialog"
+      >
+        <v-icon>mdi-coffee</v-icon>
+        <v-tooltip activator="parent" location="top">Add Product</v-tooltip>
+      </v-btn>
+      <v-btn
+        key="2"
+        color="#E07A5F"
+        size="small"
+        icon
+        @click="openExpenseDialog"
+      >
+        <v-icon>mdi-cash-minus</v-icon>
+        <v-tooltip activator="parent" location="top">Record Expense</v-tooltip>
+      </v-btn>
+    </v-speed-dial>
+
+    <!-- Expense Tracker Dialog -->
+    <ExpenseTracker
+      v-model="showExpenseDialog"
+      @expense-recorded="handleExpenseRecorded"
     />
 
     <!-- Add Product Dialog -->
@@ -694,6 +746,7 @@ import { ref, watch, onMounted } from "vue";
 import { usePosStore } from "~/stores/pos";
 import { useAuthStore } from "~/stores/auth";
 import { useReceipt } from "~/composables/useReceipt";
+import ExpenseTracker from "~/components/ExpenseTracker.vue";
 
 definePageMeta({
   layout: "default",
@@ -712,6 +765,8 @@ const loading = ref(true);
 const rightSectionLoading = ref(true);
 const headerLoading = ref(true);
 const searchLoading = ref(true);
+const showFABMenu = ref(false);
+const showExpenseDialog = ref(false);
 
 const dialog = ref(false);
 const isValid = ref(false);
@@ -778,6 +833,18 @@ const showDebtDialog = ref(false);
 
 // Cash confirmation
 const showCashConfirmDialog = ref(false);
+
+const openAddProductDialog = () => {
+  // Open product dialog
+  dialog.value = true;
+  showFABMenu.value = false;
+  // Your existing add product logic
+};
+
+const openExpenseDialog = () => {
+  showFABMenu.value = false;
+  showExpenseDialog.value = true;
+};
 
 // Calculate change
 const calculateChange = () => {
@@ -1174,6 +1241,20 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.fab-menu {
+  position: fixed;
+  bottom: 28px;
+  left: 28px;
+  z-index: 100;
+}
+
+.fab-add-product {
+  position: fixed;
+  bottom: 28px;
+  left: 28px;
+  z-index: 100;
+}
+
 .pos-container {
   display: flex;
   gap: 0;
