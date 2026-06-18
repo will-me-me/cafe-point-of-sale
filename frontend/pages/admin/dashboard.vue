@@ -96,6 +96,9 @@
         </div>
       </div>
     </div>
+    <div class="financial-section">
+      <DailyFinancialSummary :date="today" />
+    </div>
 
     <!-- Charts Row -->
     <div class="charts-row">
@@ -268,7 +271,21 @@
           <div class="action-text">Manage Users</div>
         </div>
       </div>
+      <div class="action-card" @click="openExpenseTracker">
+        <div
+          class="action-icon"
+          style="background: linear-gradient(135deg, #e07a5f, #d66b4a)"
+        >
+          <v-icon size="24" color="white">mdi-cash-minus</v-icon>
+        </div>
+        <div class="action-text">Add Expense</div>
+      </div>
     </div>
+    <!-- Expense Tracker Dialog -->
+    <ExpenseTracker
+      v-model="showExpenseDialog"
+      @expense-recorded="handleExpenseRecorded"
+    />
   </div>
 </template>
 
@@ -278,6 +295,8 @@ import { useAuthStore } from "~/stores/auth";
 import { usePosStore } from "~/stores/pos";
 import Chart from "chart.js/auto";
 import RevenueChart from "~/components/charts/RevenueChart.vue";
+import DailyFinancialSummary from "~/components/DailyFinancialSummary.vue";
+import ExpenseTracker from "~/components/ExpenseTracker.vue";
 
 definePageMeta({
   layout: "default",
@@ -289,7 +308,7 @@ const store = usePosStore();
 const revenuePeriod = ref("7 days");
 let revenueChartInstance: Chart | null = null;
 const revenueChartCanvas = ref<HTMLCanvasElement | null>(null);
-
+const showExpenseDialog = ref(false);
 // Get all orders from store
 const allOrders = computed(() => store.AllOrders || []);
 const AllLogs = computed(() => authStore.activityLogs || []);
@@ -379,6 +398,9 @@ const yesterdayItemsSold = computed(() => {
     );
   }, 0);
 });
+const openExpenseTracker = () => {
+  showExpenseDialog.value = true;
+};
 
 // Calculate percentage changes
 const calculateChange = (current: number, previous: number) => {
@@ -678,6 +700,13 @@ const generateReport = () => {
 
 const manageUsers = () => {
   navigateTo("/admin/users");
+};
+
+const handleExpenseRecorded = async () => {
+  // Refresh dashboard data
+  await store.getAllOrders();
+  // Refresh financial summary
+  // The DailyFinancialSummary component will auto-refresh
 };
 
 // Load data on mount
@@ -1219,5 +1248,46 @@ onMounted(async () => {
   .greeting-title {
     font-size: 28px;
   }
+}
+.financial-section {
+  margin-bottom: 32px;
+}
+
+.action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  background: #f8f6f2;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.action-card:hover {
+  transform: translateY(-4px);
+  background: white;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.action-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-text {
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
 }
 </style>
