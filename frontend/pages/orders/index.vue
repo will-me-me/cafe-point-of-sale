@@ -643,20 +643,16 @@ const markDebtAsPaid = (order) => {
 };
 
 const confirmMarkAsPaid = async () => {
+  const store = usePosStore();
   if (!selectedOrder.value) return;
 
   try {
-    // Update the order status in the database
-    // Assuming you have an updateOrderStatus method in your store
-    // const updated = await store.updateOrderStatus(selectedOrder.value.id, {
-    //   paymentStatus: 'completed',
-    //   paymentMode: 'debt',
-    //   clearedAt: new Date().toISOString()
-    // });
+    await store.updateDebtOrderStatus(selectedOrder.value._id, "completed");
+    await store.getAllOrders();
 
     // For demo, update locally
     const orderIndex = store.AllOrders.findIndex(
-      (o) => o.id === selectedOrder.value.id
+      (o) => o._id === selectedOrder.value._id
     );
     if (orderIndex !== -1) {
       store.AllOrders[orderIndex].paymentStatus = "completed";
