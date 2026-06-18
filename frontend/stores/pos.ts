@@ -171,6 +171,41 @@ export const usePosStore = defineStore("pos", {
         console.error("Error fetching products:", error);
       }
     },
+    async updateDebtOrderStatus(orderId: string, newStatus: string) {
+      const authStore = useAuthStore();
+
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/orders/${orderId}/debt?payment_status=${newStatus}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
+        );
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error("Server response:", errText);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("✅ Order status updated successfully:", data);
+        // Update the order in the local state
+        const orderIndex = this.AllOrders.findIndex(
+          (order) => order.id === orderId
+        );
+
+        if (orderIndex !== -1) {
+          this.AllOrders[orderIndex].paymentStatus = newStatus;
+        }
+        return data;
+      } catch (error) {
+        console.error("❌ Error updating order status:", error);
+        throw error;
+      }
+    },
 
     async saveOrder(orderData: any) {
       try {
