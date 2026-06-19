@@ -160,6 +160,7 @@
 import { ref, computed, onMounted } from "vue";
 import ExpenseTracker from "./ExpenseTracker.vue";
 import { useAuthStore } from "@/stores/auth";
+import { usePosStore } from "@/stores/pos";
 
 const props = defineProps({
   date: {
@@ -168,6 +169,7 @@ const props = defineProps({
   },
 });
 
+const posStore = usePosStore();
 const showExpenseDialog = ref(false);
 const loading = ref(false);
 const summary = ref({
@@ -245,9 +247,16 @@ const getDaysAgo = (date: string) => {
   return days;
 };
 
-const markDebtPaid = (debt: any) => {
-  // Handle marking debt as paid
-  console.log("Mark debt paid:", debt);
+const markDebtPaid = async (debt: any) => {
+  try {
+    const debtId = debt.id;
+    await posStore.updateDebtOrderStatus(debtId);
+
+    // Refresh the summary data after marking debt as paid
+    await refreshData();
+  } catch (error) {
+    console.error("Failed to mark debt as paid:", error);
+  }
 };
 
 onMounted(() => {
