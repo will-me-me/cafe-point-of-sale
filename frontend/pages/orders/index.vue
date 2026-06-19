@@ -19,8 +19,130 @@
           @click="showDebtManagement = true"
         >
           <v-icon start>mdi-account-cash</v-icon>
-          Manage Debts
+          Manage Debts ({{ debtCount }})
         </v-btn>
+      </div>
+    </div>
+    <div v-if="hasDebtOrders" class="debt-overview-section">
+      <div class="debt-overview-header">
+        <div class="header-left">
+          <v-icon color="#E07A5F" size="24">mdi-account-cash</v-icon>
+          <span class="debt-title">Debt Overview</span>
+          <v-chip size="small" color="#E07A5F" text-color="white">
+            {{ debtCount }} Pending
+          </v-chip>
+        </div>
+        <div class="header-right">
+          <span class="total-debt-label">Total Outstanding</span>
+          <span class="total-debt-amount">ksh{{ totalDebt }}</span>
+        </div>
+      </div>
+
+      <div class="debt-stats-grid">
+        <div class="debt-stat-card">
+          <div class="stat-icon" style="background: #e07a5f20">
+            <v-icon color="#E07A5F" size="20">mdi-account-group</v-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">
+              {{ debtOverview.total_customers || 0 }}
+            </div>
+            <div class="stat-label">Customers with Debt</div>
+          </div>
+        </div>
+        <div class="debt-stat-card">
+          <div class="stat-icon" style="background: #2d6a4f20">
+            <v-icon color="#2D6A4F" size="20">mdi-clock-outline</v-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">
+              {{ debtOverview.average_age || 0 }} days
+            </div>
+            <div class="stat-label">Average Age</div>
+          </div>
+        </div>
+        <div class="debt-stat-card">
+          <div class="stat-icon" style="background: #f4a26120">
+            <v-icon color="#F4A261" size="20">mdi-chart-pie</v-icon>
+          </div>
+          <div class="stat-info">
+            <div class="stat-value">{{ debtCount }}</div>
+            <div class="stat-label">Total Debt Orders</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Debt Aging Breakdown -->
+      <div class="debt-aging-section">
+        <div class="aging-header">
+          <span class="aging-title">Aging Breakdown</span>
+        </div>
+        <div class="aging-bars">
+          <div class="aging-item">
+            <span class="aging-label">0-7 Days</span>
+            <div class="aging-bar">
+              <div
+                class="aging-fill"
+                :style="{
+                  width: getAgingPercentage('0-7_days') + '%',
+                  background: getAgingColor('0-7_days'),
+                }"
+              ></div>
+            </div>
+            <span class="aging-amount"
+              >ksh{{ debtOverview.by_age?.["0-7_days"]?.toFixed(2) || 0 }}</span
+            >
+          </div>
+          <div class="aging-item">
+            <span class="aging-label">8-14 Days</span>
+            <div class="aging-bar">
+              <div
+                class="aging-fill"
+                :style="{
+                  width: getAgingPercentage('8-14_days') + '%',
+                  background: getAgingColor('8-14_days'),
+                }"
+              ></div>
+            </div>
+            <span class="aging-amount"
+              >ksh{{
+                debtOverview.by_age?.["8-14_days"]?.toFixed(2) || 0
+              }}</span
+            >
+          </div>
+          <div class="aging-item">
+            <span class="aging-label">15-30 Days</span>
+            <div class="aging-bar">
+              <div
+                class="aging-fill"
+                :style="{
+                  width: getAgingPercentage('15-30_days') + '%',
+                  background: getAgingColor('15-30_days'),
+                }"
+              ></div>
+            </div>
+            <span class="aging-amount"
+              >ksh{{
+                debtOverview.by_age?.["15-30_days"]?.toFixed(2) || 0
+              }}</span
+            >
+          </div>
+          <div class="aging-item">
+            <span class="aging-label">30+ Days</span>
+            <div class="aging-bar">
+              <div
+                class="aging-fill"
+                :style="{
+                  width: getAgingPercentage('30+_days') + '%',
+                  background: getAgingColor('30+_days'),
+                }"
+              ></div>
+            </div>
+            <span class="aging-amount"
+              >ksh{{ debtOverview.by_age?.["30+_days"]?.toFixed(2) || 0 }}</span
+            >
+          </div>
+        </div>
       </div>
     </div>
 
@@ -224,6 +346,220 @@
         </div>
       </div>
     </v-card>
+    <v-dialog
+      v-model="showDebtManagement"
+      max-width="900"
+      transition="dialog-transition"
+    >
+      <v-card class="debt-management-dialog">
+        <v-card-title class="dialog-header">
+          <div class="title-content">
+            <v-icon size="28" color="#E07A5F" class="mr-3"
+              >mdi-account-cash</v-icon
+            >
+            <span>Debt Management</span>
+            <v-chip
+              size="small"
+              color="#E07A5F"
+              text-color="white"
+              class="ml-3"
+            >
+              {{ debtCount }} Pending
+            </v-chip>
+          </div>
+          <v-btn icon variant="text" @click="showDebtManagement = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text class="dialog-content">
+          <!-- Debt Summary Cards -->
+          <div class="debt-summary-cards">
+            <div class="debt-stat-card">
+              <div class="stat-icon" style="background: #e07a5f20">
+                <v-icon color="#E07A5F" size="24">mdi-cash</v-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">
+                  ksh{{ debtOverview.total_debt?.toFixed(2) || 0 }}
+                </div>
+                <div class="stat-label">Total Outstanding</div>
+              </div>
+            </div>
+            <div class="debt-stat-card">
+              <div class="stat-icon" style="background: #2d6a4f20">
+                <v-icon color="#2D6A4F" size="24">mdi-account-group</v-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">
+                  {{ debtOverview.total_customers || 0 }}
+                </div>
+                <div class="stat-label">Customers with Debt</div>
+              </div>
+            </div>
+            <div class="debt-stat-card">
+              <div class="stat-icon" style="background: #f4a26120">
+                <v-icon color="#F4A261" size="24">mdi-clock-outline</v-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">
+                  {{ debtOverview.average_age || 0 }} days
+                </div>
+                <div class="stat-label">Average Age</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Debt Aging Breakdown -->
+          <div class="debt-aging-section">
+            <div class="aging-header">
+              <span class="aging-title">📊 Aging Breakdown</span>
+            </div>
+            <div class="aging-bars">
+              <div class="aging-item">
+                <span class="aging-label">0-7 Days</span>
+                <div class="aging-bar">
+                  <div
+                    class="aging-fill"
+                    :style="{
+                      width: getAgingPercentage('0-7_days') + '%',
+                      background: getAgingColor('0-7_days'),
+                    }"
+                  ></div>
+                </div>
+                <span class="aging-amount"
+                  >ksh{{
+                    debtOverview.by_age?.["0-7_days"]?.toFixed(2) || 0
+                  }}</span
+                >
+              </div>
+              <div class="aging-item">
+                <span class="aging-label">8-14 Days</span>
+                <div class="aging-bar">
+                  <div
+                    class="aging-fill"
+                    :style="{
+                      width: getAgingPercentage('8-14_days') + '%',
+                      background: getAgingColor('8-14_days'),
+                    }"
+                  ></div>
+                </div>
+                <span class="aging-amount"
+                  >ksh{{
+                    debtOverview.by_age?.["8-14_days"]?.toFixed(2) || 0
+                  }}</span
+                >
+              </div>
+              <div class="aging-item">
+                <span class="aging-label">15-30 Days</span>
+                <div class="aging-bar">
+                  <div
+                    class="aging-fill"
+                    :style="{
+                      width: getAgingPercentage('15-30_days') + '%',
+                      background: getAgingColor('15-30_days'),
+                    }"
+                  ></div>
+                </div>
+                <span class="aging-amount"
+                  >ksh{{
+                    debtOverview.by_age?.["15-30_days"]?.toFixed(2) || 0
+                  }}</span
+                >
+              </div>
+              <div class="aging-item">
+                <span class="aging-label">30+ Days</span>
+                <div class="aging-bar">
+                  <div
+                    class="aging-fill"
+                    :style="{
+                      width: getAgingPercentage('30+_days') + '%',
+                      background: getAgingColor('30+_days'),
+                    }"
+                  ></div>
+                </div>
+                <span class="aging-amount"
+                  >ksh{{
+                    debtOverview.by_age?.["30+_days"]?.toFixed(2) || 0
+                  }}</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Debt List -->
+          <div class="debt-list-section">
+            <div class="list-header">
+              <span class="list-title">📋 All Pending Debts</span>
+              <span class="list-count"
+                >{{ debtOverview.debts?.length || 0 }} orders</span
+              >
+            </div>
+            <div class="debt-list">
+              <div
+                v-for="debt in debtOverview.debts"
+                :key="debt.id"
+                class="debt-list-item"
+                :class="{ overdue: debt.age_days > 7 }"
+              >
+                <div class="debt-item-info">
+                  <div class="debt-item-customer">{{ debt.customerName }}</div>
+                  <div class="debt-item-receipt">{{ debt.receiptNumber }}</div>
+                  <div class="debt-item-date">
+                    {{ formatDate(debt.created_at) }}
+                  </div>
+                </div>
+                <div class="debt-item-amount">
+                  ksh{{ debt.total.toFixed(2) }}
+                </div>
+                <div class="debt-item-age">
+                  <span :class="{ 'overdue-text': debt.age_days > 7 }">
+                    {{ debt.age_days }} days
+                  </span>
+                  <v-chip
+                    v-if="debt.age_days > 7"
+                    size="x-small"
+                    color="#EF4444"
+                    text-color="white"
+                  >
+                    Overdue
+                  </v-chip>
+                </div>
+                <v-btn
+                  size="small"
+                  color="#2D6A4F"
+                  @click="markDebtAsPaid(debt)"
+                >
+                  <v-icon start size="16">mdi-check</v-icon>
+                  Mark Paid
+                </v-btn>
+              </div>
+              <div v-if="!debtOverview.debts?.length" class="no-debts">
+                <v-icon size="48" color="#E5E7EB">mdi-check-circle</v-icon>
+                <p>No outstanding debts! 🎉</p>
+                <span class="no-debts-sub"
+                  >All debt orders have been cleared.</span
+                >
+              </div>
+            </div>
+          </div>
+        </v-card-text>
+
+        <v-card-actions class="dialog-actions">
+          <v-btn variant="text" @click="showDebtManagement = false"
+            >Close</v-btn
+          >
+          <v-btn color="#E07A5F" variant="outlined" @click="refreshDebtData">
+            <v-icon start>mdi-refresh</v-icon>
+            Refresh
+          </v-btn>
+          <v-btn color="#2D6A4F" @click="exportDebtReport">
+            <v-icon start>mdi-export</v-icon>
+            Export Debt Report
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Order Details Dialog -->
     <v-dialog v-model="detailsDialog" max-width="800">
@@ -379,7 +715,7 @@
     </v-dialog>
 
     <!-- Debt Management Dialog -->
-    <v-dialog v-model="showDebtManagement" max-width="900">
+    <!-- <v-dialog v-model="showDebtManagement" max-width="900">
       <v-card class="debt-management-dialog">
         <div class="dialog-header">
           <div>
@@ -444,7 +780,7 @@
           </div>
         </div>
       </v-card>
-    </v-dialog>
+    </v-dialog> -->
 
     <!-- Mark Debt as Paid Confirmation Dialog -->
     <v-dialog v-model="showPaidConfirmation" max-width="400">
@@ -504,9 +840,24 @@ const dateFilter = ref("");
 const itemsPerPage = ref(10);
 const currentPage = ref(1);
 const detailsDialog = ref(false);
+// const showDebtManagement = ref(false);
+// const showPaidConfirmation = ref(false);
+const selectedOrder = ref(null);
+
 const showDebtManagement = ref(false);
 const showPaidConfirmation = ref(false);
-const selectedOrder = ref(null);
+const debtOverview = ref({
+  total_debt: 0,
+  total_customers: 0,
+  average_age: 0,
+  by_age: {
+    "0-7_days": 0,
+    "8-14_days": 0,
+    "15-30_days": 0,
+    "30+_days": 0,
+  },
+  debts: [],
+});
 
 const snackbar = ref({
   show: false,
@@ -523,6 +874,7 @@ const debtOrders = computed(() => {
     (order) => order.paymentMode === "debt" && order.paymentStatus === "pending"
   );
 });
+const debtList = computed(() => debtOverview.value.debts || []);
 
 const hasDebtOrders = computed(() => debtOrders.value.length > 0);
 const totalDebt = computed(() => {
@@ -531,6 +883,7 @@ const totalDebt = computed(() => {
     .toFixed(2);
 });
 const debtCount = computed(() => debtOrders.value.length);
+
 const uniqueDebtCustomers = computed(() => {
   const customers = new Set(debtOrders.value.map((o) => o.customerName));
   return Array.from(customers);
@@ -631,6 +984,15 @@ const viewOrderDetails = (order) => {
   detailsDialog.value = true;
 };
 
+const fetchDebtOverview = async () => {
+  try {
+    const response = await store.getDebtOverview();
+    debtOverview.value = response;
+  } catch (error) {
+    console.error("Error fetching debt overview:", error);
+  }
+};
+
 const printReceipt = (order) => {
   // Use the receipt composable
   const { printReceipt } = useReceipt();
@@ -647,7 +1009,9 @@ const confirmMarkAsPaid = async () => {
   if (!selectedOrder.value) return;
 
   try {
-    await store.updateDebtOrderStatus(selectedOrder.value._id, "completed");
+    const orderId = selectedOrder.value._id ?? selectedOrder.value.id;
+    await store.updateDebtOrderStatus(orderId);
+    await fetchDebtOverview();
     await store.getAllOrders();
 
     // For demo, update locally
@@ -720,7 +1084,32 @@ const exportOrders = () => {
   URL.revokeObjectURL(url);
 };
 
+const refreshDebtData = () => {
+  console.log("Refreshing debt data...");
+  fetchDebtOverview();
+};
+
+const getAgingPercentage = (key: string) => {
+  const total = debtOverview.value.total_debt || 0;
+  const value =
+    debtOverview.value.by_age?.[
+      key as keyof typeof debtOverview.value.by_age
+    ] || 0;
+  return total > 0 ? (value / total) * 100 : 0;
+};
+
+const getAgingColor = (key: string) => {
+  const colors: Record<string, string> = {
+    "0-7_days": "#2D6A4F",
+    "8-14_days": "#F4A261",
+    "15-30_days": "#E07A5F",
+    "30+_days": "#EF4444",
+  };
+  return colors[key] || "#9CA3AF";
+};
+
 onMounted(async () => {
+  await fetchDebtOverview();
   await store.getAllOrders();
 });
 </script>
@@ -1329,6 +1718,395 @@ onMounted(async () => {
   .debt-notice {
     flex-direction: column;
     text-align: center;
+  }
+}
+.debt-overview-section {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e07a5f20;
+}
+
+.debt-overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.debt-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.header-right {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.total-debt-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.total-debt-amount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #e07a5f;
+}
+
+.debt-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.debt-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8f6f2;
+  border-radius: 12px;
+}
+
+.debt-stat-card .stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.debt-stat-card .stat-info {
+  flex: 1;
+}
+
+.debt-stat-card .stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.debt-stat-card .stat-label {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Debt Aging Section */
+.debt-aging-section {
+  background: #f8f6f2;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.aging-header {
+  margin-bottom: 12px;
+}
+
+.aging-title {
+  font-weight: 600;
+  color: #1b4332;
+  font-size: 14px;
+}
+
+.aging-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aging-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aging-label {
+  font-size: 12px;
+  color: #6b7280;
+  min-width: 60px;
+}
+
+.aging-bar {
+  flex: 1;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.aging-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.aging-amount {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1b4332;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* Debt Management Dialog */
+.debt-management-dialog {
+  border-radius: 32px !important;
+  overflow: hidden;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0 24px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b4332;
+}
+
+.title-content {
+  display: flex;
+  align-items: center;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.debt-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.debt-list-section {
+  margin-top: 24px;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-title {
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.list-count {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.debt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.debt-list-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #f8f6f2;
+  border-radius: 12px;
+  border-left: 3px solid #e07a5f;
+}
+
+.debt-list-item.overdue {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.debt-item-info {
+  flex: 1;
+}
+
+.debt-item-customer {
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.debt-item-receipt {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.debt-item-date {
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.debt-item-amount {
+  font-weight: 700;
+  color: #e07a5f;
+  min-width: 80px;
+}
+
+.debt-item-age {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 80px;
+}
+
+.debt-item-age span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.debt-item-age span.overdue-text {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.debt-btn {
+  text-transform: none;
+  border-radius: 40px;
+  background: #fff3e0;
+  color: #e07a5f;
+}
+
+.debt-btn:hover {
+  background: #ffe8cc;
+}
+
+.no-debts {
+  text-align: center;
+  padding: 32px;
+  color: #6b7280;
+}
+
+.no-debts p {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1b4332;
+}
+
+.no-debts-sub {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.dialog-actions {
+  padding: 16px 24px 24px;
+  gap: 12px;
+}
+
+/* Debt Row in Table */
+.debt-row {
+  background: #fff8f0;
+  border-left: 3px solid #e07a5f;
+}
+
+.debt-row:hover {
+  background: #fff3e0;
+}
+
+.payment-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.payment-badge.cash {
+  background: #2d6a4f20;
+  color: #2d6a4f;
+}
+
+.payment-badge.mpesa {
+  background: #6b4e7120;
+  color: #6b4e71;
+}
+
+.payment-badge.debt {
+  background: #e07a5f20;
+  color: #e07a5f;
+}
+
+/* Confirm Dialog */
+.confirm-dialog {
+  text-align: center;
+  padding: 32px;
+  border-radius: 32px !important;
+}
+
+.confirm-icon {
+  margin-bottom: 20px;
+}
+
+.confirm-dialog h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 12px;
+}
+
+.confirm-dialog p {
+  color: #6b7280;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .debt-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .debt-summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .debt-list-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .debt-overview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .debt-item-age {
+    min-width: auto;
+  }
+
+  .debt-item-amount {
+    min-width: auto;
   }
 }
 </style>
