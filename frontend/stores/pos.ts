@@ -171,12 +171,12 @@ export const usePosStore = defineStore("pos", {
         console.error("Error fetching products:", error);
       }
     },
-    async updateDebtOrderStatus(orderId: string, newStatus: string) {
+    async updateDebtOrderStatus(orderId: string) {
       const authStore = useAuthStore();
 
       try {
         const response = await fetch(
-          `http://127.0.0.1:8000/orders/${orderId}/debt?payment_status=${newStatus}`,
+          `http://127.0.0.1:8000/reports/debt/${orderId}/pay`,
           {
             method: "PUT",
             headers: {
@@ -207,6 +207,33 @@ export const usePosStore = defineStore("pos", {
       }
     },
 
+    async getDebtOverview() {
+      const authStore = useAuthStore();
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:8000/reports/debt/overview",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error("Server response:", errText);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("✅ Debt overview fetched successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("❌ Error fetching debt overview:", error);
+        throw error;
+      }
+    },
     async saveOrder(orderData: any) {
       try {
         const order = {
