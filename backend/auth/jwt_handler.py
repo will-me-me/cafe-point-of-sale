@@ -9,6 +9,8 @@ from database import db
 from bson import ObjectId
 from passlib.context import CryptContext
 
+from products.service import ProductService
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
@@ -64,3 +66,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return user
+
+async def get_product_service():
+    return ProductService()
+
+async def check_admin_permissions(current_user = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to perform this action",
+        )
+    return current_user
