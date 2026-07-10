@@ -157,8 +157,10 @@ class ProductBase(BaseModel):
 
     @field_validator('unit_conversion')
     def validate_unit_conversion(cls, v):
-        if v is None:
-            raise ValueError("Unit conversion details must be provided")
+        if v is not None:
+            if not v.purchase_unit or not v.selling_unit or not v.conversion_factor:
+
+                raise ValueError("All fields in unit_conversion must be provided if unit_conversion is set")
         return v
 
 class ProductCreate(ProductBase):
