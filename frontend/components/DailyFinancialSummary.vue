@@ -259,8 +259,8 @@ const markDebtPaid = async (debt: any) => {
   }
 };
 
-onMounted(() => {
-  refreshData();
+onMounted(async () => {
+  await refreshData();
 });
 </script>
 
