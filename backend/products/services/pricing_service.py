@@ -58,10 +58,20 @@ class PricingService:
         Returns:
             Decimal: Calculated cost for the variant
         """
-        cost_per_kg = PricingService.get_cost_per_base_unit(product)
-        weight_kg = PricingService.get_variant_weight(variant)
-        
-        return cost_per_kg * weight_kg
+        if product.unit_conversion:
+            cost_per_kg = PricingService.get_cost_per_base_unit(product)
+            weight_kg = PricingService.get_variant_weight(variant)
+            
+            # If weight is 0, return 0 (could be a non-weight variant)
+            if weight_kg == 0:
+                return Decimal(0)
+            
+            return cost_per_kg * weight_kg
+        else:
+            # Non-bulk product: cost is the cost price
+            if product.pricing:
+                return Decimal(str(product.pricing.cost_price))
+            return Decimal(0)
     
     @staticmethod
     def calculate_variant_margin(product: Product, variant: ProductVariant) -> Dict[str, float]:
