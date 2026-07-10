@@ -158,32 +158,66 @@ class ProductService:
     # ============ PRODUCT CRUD ============
     
     async def create_product(self, product_data: ProductCreate, user_id: str) -> Product:
-        """Create a new product with inventory and pricing"""
+        """Create a new product with dynamic variant pricing"""
         # Convert to dict for MongoDB
         product_dict = product_data.dict(exclude_unset=True)
         product_dict["created_at"] = dt.datetime.utcnow()
         product_dict["updated_at"] = dt.datetime.utcnow()
         product_dict["created_by"] = user_id
         
-        # Initialize inventory if not provided
+        # Initialize inventory
         if not product_dict.get("inventory"):
             product_dict["inventory"] = {
                 "quantity": 0,
                 "reserved": 0,
-                "status": StockStatus.OUT_OF_STOCK,
-                "reorder_level": 10,
+                "available": 0,
+                "reorder_level": 0,
                 "location": "",
                 "created_at": dt.datetime.utcnow(),
                 "updated_at": dt.datetime.utcnow()
             }
+        else:
+            # Set product_id in inventory
+            product_dict["inventory"]["product_id"] = None  # Will be set after insert
+        
+        # Handle variants based on product type
         if product_dict.get("variants"):
-            for variant in product_dict["variants"]:
+            # Check if this is a bulk product (has unit_conversion)
+            has_unit_conversion = product_dict.get("unit_conversion") is not None
+            
+            for idx, variant in enumerate(product_dict["variants"]):
                 if "attributes" not in variant:
                     variant["attributes"] = {}
-                # Convert weight from string to kg if needed
-                if "weight" in variant["attributes"] and "weight_kg" not in variant["attributes"]:
-                    weight_str = variant["attributes"]["weight"]
-                    variant["attributes"]["weight_kg"] = self._convert_weight_to_kg(weight_str)
+                
+                # For bulk products, ensure weight_kg is present
+                if has_unit_conversion:
+                    # Convert weight from string to kg if needed
+                    if "weight" in variant["attributes"] and "weight_kg" not in variant["attributes"]:
+                        weight_str = variant["attributes"]["weight"]
+                        variant["attributes"]["weight_kg"] = self._convert_weight_to_kg(weight_str)
+                    elif "weight_kg" not in variant["attributes"]:
+                        # For bulk products, weight_kg is required
+                        raise ValueError(f"Variant '{variant.get('variant_name', '')}' must have 'weight_kg' in attributes")
+                
+                # Generate variant_id if not present
+                if "id" not in variant:
+                    variant["id"] = str(ObjectId())
+                
+                # Initialize variant inventory
+                if "inventory" not in variant:
+                    variant["inventory"] = {
+                        "quantity": 0,
+                        "reserved": 0,
+                        "available": 0,
+                        "reorder_level": 0,
+                        "product_id": None,  # Will be set after insert
+                        "variant_id": variant["id"],
+                        "created_at": dt.datetime.utcnow(),
+                        "updated_at": dt.datetime.utcnow()
+                    }
+                else:
+                    variant["inventory"]["variant_id"] = variant["id"]
+                    variant["inventory"]["product_id"] = None  # Will be set after insert
         
         # Convert Decimal to float for MongoDB
         product_dict = convert_decimal_to_float(product_dict)
@@ -192,6 +226,35 @@ class ProductService:
         try:
             result = await self.collection.insert_one(product_dict)
             product_dict["id"] = str(result.inserted_id)
+            
+            # Update inventory with product_id after insert
+            product_id = str(result.inserted_id)
+            
+            # Update main inventory
+            await self.collection.update_one(
+                {"_id": ObjectId(product_id)},
+                {
+                    "$set": {
+                        "inventory.product_id": product_id,
+                        "inventory.variant_id": None
+                    }
+                }
+            )
+            
+            # Update variant inventories
+            if product_dict.get("variants"):
+                for variant in product_dict["variants"]:
+                    if "id" in variant:
+                        await self.collection.update_one(
+                            {"_id": ObjectId(product_id), "variants.id": variant["id"]},
+                            {
+                                "$set": {
+                                    "variants.$.inventory.product_id": product_id,
+                                    "variants.$.inventory.variant_id": variant["id"]
+                                }
+                            }
+                        )
+            
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create product: {str(e)}")
         
