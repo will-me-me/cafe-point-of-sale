@@ -6,6 +6,8 @@ from bson import ObjectId
 import os
 import shutil
 
+from fastapi.encoders import jsonable_encoder
+
 from auth.jwt_handler import get_current_user
 
 from database import db
@@ -102,7 +104,7 @@ async def get_expenses(
             expense["id"] = str(expense["_id"])
             del expense["_id"]
         
-        return expenses
+        return jsonable_encoder(expenses)
         
     except Exception as e:
         raise HTTPException(
