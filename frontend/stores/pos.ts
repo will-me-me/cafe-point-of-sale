@@ -1,16 +1,56 @@
+// stores/pos.ts
 import { defineStore } from "pinia";
 
+// Updated Product interface to match API response
 interface Product {
-  id: number;
+  id: string;
+  _id: string;
   name: string;
-  price: number;
-  category: "coffee" | "tea" | "snack";
+  sku: string;
+  barcode: string;
+  product_type: string;
+  category_id: string;
+  brand_id: string;
+  pricing: {
+    cost_price: number;
+    selling_price: number;
+    price_tiers: {
+      retail: number;
+      wholesale: number;
+      dealer: number;
+      vip: number;
+      member: number;
+    };
+    is_taxable: boolean;
+    margin: number;
+    markup: number;
+  };
+  inventory: {
+    quantity: number;
+    reserved: number;
+    available: number;
+    reorder_level: number;
+    status: string;
+    location: string;
+    shelf_number: string;
+  };
+  has_variants: boolean;
+  variants: any[];
+  is_active: boolean;
+  is_featured: boolean;
+  tags: string[];
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface CartItem {
   id: number;
-  productId: number;
+  productId: string;
   name: string;
+  sku: string;
+  barcode?: string;
+  variant_id?: string;
   size: string;
   temp: string;
   modifier: string;
@@ -27,8 +67,9 @@ interface Category {
   icon: string;
   gradient: string;
 }
-interface Oders {
-  id: number;
+
+interface Order {
+  id: string;
   items: CartItem[];
   subtotal: number;
   tax: number;
@@ -37,11 +78,11 @@ interface Oders {
   paymentMode: string;
   paymentStatus: string;
 }
-import { useAuthStore } from "./auth";
 
 export const usePosStore = defineStore("pos", {
   state: () => ({
-    AllOrders: [] as Oders[],
+    AllOrders: [] as Order[],
+    paymentMode: "cash" as "cash" | "mpesa" | "debt",
 
     categories: [
       {
@@ -71,7 +112,7 @@ export const usePosStore = defineStore("pos", {
     ] as Category[],
 
     products: [] as Product[],
-
+    searchQuery: "",
     cart: [] as CartItem[],
     selectedCategory: "coffee" as string,
     nextCartId: 1,
@@ -79,14 +120,44 @@ export const usePosStore = defineStore("pos", {
 
   getters: {
     filteredProducts: (state) => {
-      return state.products.filter(
-        (product) => product.category === state.selectedCategory
-      );
+      let filtered = state.products;
+      console.log(filtered, "All products before filtering");
+
+      // Filter by category
+      if (state.selectedCategory) {
+        // Map category names to product types or categories
+        // You might need to adjust this mapping based on your data
+        filtered = filtered.filter((product) => {
+          // If product has category_id, try to match
+          if (product.category_id) {
+            // For now, just show all products since we don't have category mapping
+            return true;
+          }
+          return true;
+        });
+      }
+
+      // Filter by search query
+      if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (product) =>
+            product.name.toLowerCase().includes(query) ||
+            product.sku.toLowerCase().includes(query) ||
+            (product.barcode && product.barcode.includes(query))
+        );
+      }
+
+      return filtered;
     },
 
     filteredCategories: (state) => {
       return state.categories.filter((category) =>
-        state.products.some((product) => product.category === category.id)
+        state.products.some((product) => {
+          // Check if product belongs to this category
+          // This mapping needs to be adjusted based on your actual data
+          return true;
+        })
       );
     },
 
@@ -95,7 +166,6 @@ export const usePosStore = defineStore("pos", {
     hasCartItems: (state) => state.cart.length > 0,
 
     subtotal: (state) => {
-      // FIXED: Use unitPrice * quantity
       return parseFloat(
         state.cart
           .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
@@ -117,42 +187,578 @@ export const usePosStore = defineStore("pos", {
       this.selectedCategory = category;
     },
 
-    async addProduct(formData: FormData) {
+    setSearchQuery(query: string) {
+      this.searchQuery = query;
+    },
+
+    async addProduct(productData: any) {
       const authStore = useAuthStore();
 
       try {
-        console.log("token in addProduct:", authStore.token);
-        let tokenValue = localStorage.getItem("auth_token");
-        console.log("localStorage token in addProduct:", tokenValue);
+        // Build the base product object
+        const product: any = {
+          name: productData.name,
+          description: productData.description || "",
+          short_description: productData.short_description || "",
+          sku: productData.sku,
+          barcode: productData.barcode || "",
+          product_type: productData.product_type || "stock",
+          category_id: productData.category_id || null,
+          brand_id: productData.brand_id || null,
+          manufacturer_id: productData.manufacturer_id || null,
 
-        const res = await fetch("http://127.0.0.1:8000/products/", {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${authStore.token}`,
-            Accept: "application/json",
+          // Suppliers
+          suppliers: productData.suppliers || [],
+
+          // Attributes and specifications
+          attributes: productData.attributes || {},
+          specifications: productData.specifications || {},
+
+          // Inventory
+          inventory: {
+            quantity: productData.quantity || 0,
+            reserved: productData.reserved || 0,
+            min_stock: productData.min_stock || null,
+            max_stock: productData.max_stock || null,
+            reorder_level: productData.reorder_level || 10,
+            location: productData.location || "",
+            shelf_number: productData.shelf_number || "",
+            status: productData.status || "in_stock",
           },
+
+          // Pricing
+          pricing: {
+            cost_price: productData.cost_price || 0,
+            selling_price: productData.selling_price || 0,
+            price_tiers: {
+              retail:
+                productData.retail_price || productData.selling_price || 0,
+              wholesale: productData.wholesale_price || null,
+              dealer: productData.dealer_price || null,
+              vip: productData.vip_price || null,
+              member: productData.member_price || null,
+            },
+            is_taxable:
+              productData.is_taxable !== undefined
+                ? productData.is_taxable
+                : true,
+          },
+
+          // Variants
+          has_variants: productData.has_variants || false,
+          variants: productData.variants
+            ? productData.variants.map((variant: any) => ({
+                sku: variant.sku,
+                barcode: variant.barcode || "",
+                variant_name: variant.variant_name,
+                attributes: variant.attributes || {},
+                is_active:
+                  variant.is_active !== undefined ? variant.is_active : true,
+                is_default: variant.is_default || false,
+                sort_order: variant.sort_order || 0,
+                pricing: variant.pricing
+                  ? {
+                      selling_price: variant.pricing.selling_price || 0,
+                      cost_price: variant.pricing.cost_price || null,
+                      price_tiers: variant.pricing.price_tiers || null,
+                    }
+                  : null,
+                inventory: variant.inventory
+                  ? {
+                      quantity: variant.inventory.quantity || 0,
+                      reserved: variant.inventory.reserved || 0,
+                      reorder_level: variant.inventory.reorder_level || 5,
+                    }
+                  : null,
+              }))
+            : [],
+
+          // Additional info
+          weight: productData.weight || null,
+          length: productData.length || null,
+          width: productData.width || null,
+          height: productData.height || null,
+          volume: productData.volume || null,
+          unit_of_measure: productData.unit_of_measure || "piece",
+          minimum_order: productData.minimum_order || 1,
+          maximum_order: productData.maximum_order || null,
+
+          // Status
+          is_active:
+            productData.is_active !== undefined ? productData.is_active : true,
+          is_featured: productData.is_featured || false,
+          is_new: productData.is_new || false,
+          is_on_sale: productData.is_on_sale || false,
+          is_rental: productData.is_rental || false,
+          is_digital: productData.is_digital || false,
+          is_service: productData.is_service || false,
+          is_composite: productData.is_composite || false,
+
+          // Tags
+          tags: productData.tags || [],
+
+          // Media
+          media: productData.media
+            ? {
+                images: productData.media.images || [],
+                videos: productData.media.videos || [],
+                documents: productData.media.documents || [],
+              }
+            : null,
+
+          // SEO
+          seo_title: productData.seo_title || null,
+          seo_description: productData.seo_description || null,
+          seo_keywords: productData.seo_keywords || null,
+
+          // Tax
+          tax_id: productData.tax_id || null,
+          is_taxable:
+            productData.is_taxable !== undefined
+              ? productData.is_taxable
+              : true,
+
+          // Warranty
+          warranty: productData.warranty
+            ? {
+                months: productData.warranty.months || 0,
+                provider: productData.warranty.provider || "manufacturer",
+                provider_name: productData.warranty.provider_name || null,
+                terms: productData.warranty.terms || null,
+                is_transferable: productData.warranty.is_transferable || false,
+                registration_required:
+                  productData.warranty.registration_required || false,
+                registration_url: productData.warranty.registration_url || null,
+                is_active:
+                  productData.warranty.is_active !== undefined
+                    ? productData.warranty.is_active
+                    : true,
+              }
+            : null,
+
+          // Expiry
+          expiry: productData.expiry
+            ? {
+                days_valid: productData.expiry.days_valid || null,
+                months_valid: productData.expiry.months_valid || null,
+                years_valid: productData.expiry.years_valid || null,
+                require_expiry: productData.expiry.require_expiry || false,
+                alert_days_before: productData.expiry.alert_days_before || 30,
+                alert_days_after: productData.expiry.alert_days_after || 7,
+                allow_sale_after_expiry:
+                  productData.expiry.allow_sale_after_expiry || false,
+                notes: productData.expiry.notes || null,
+              }
+            : null,
+
+          // Batch tracking
+          track_batches: productData.track_batches || false,
+          track_serial_numbers: productData.track_serial_numbers || false,
+
+          // Purchase and sales info
+          purchase_unit: productData.purchase_unit || null,
+          selling_unit: productData.selling_unit || null,
+
+          // Unit conversion - Only add if provided
+          unit_conversion: productData.unit_conversion
+            ? {
+                purchase_unit: productData.unit_conversion.purchase_unit,
+                selling_unit: productData.unit_conversion.selling_unit,
+                conversion_factor:
+                  productData.unit_conversion.conversion_factor,
+              }
+            : undefined,
+
+          // Notes
+          notes: productData.notes || "",
+        };
+
+        // Remove undefined properties to avoid validation errors
+        Object.keys(product).forEach((key) => {
+          if (product[key] === undefined) {
+            delete product[key];
+          }
         });
 
-        if (!res.ok) {
-          const errText = await res.text();
-          console.error("Server response:", errText);
-          throw new Error(`HTTP error! status: ${res.status}`);
+        console.log(
+          "📤 Sending product data:",
+          JSON.stringify(product, null, 2)
+        );
+
+        const response = await fetch("http://127.0.0.1:8000/products/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify(product),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Product creation failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
         }
 
-        const data = await res.json();
-        console.log("✅ Product added successfully:", data);
+        const data = await response.json();
+        console.log("✅ Product created successfully:", data);
+
+        await this.getAllProducts();
         return data;
       } catch (error) {
-        console.error("❌ Error adding product:", error);
+        console.error("❌ Error creating product:", error);
         throw error;
       }
     },
-    async getAllOrders() {
+
+    async addBrand(brandData: any) {
+      const authStore = useAuthStore();
+
       try {
-        const response = await fetch("http://127.0.0.1:8000/orders/");
+        const brand = {
+          name: brandData.name,
+          description: brandData.description || "",
+          logo_url: brandData.logo_url || "",
+          website: brandData.website || "",
+          is_active:
+            brandData.is_active !== undefined ? brandData.is_active : true,
+        };
+
+        console.log("📤 Sending brand data:", JSON.stringify(brand, null, 2));
+
+        const response = await fetch("http://127.0.0.1:8000/brands/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify(brand),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Brand creation failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
         const data = await response.json();
-        console.log(data);
+        await this.getAllBrands(); // Refresh the brands list after adding a new brand
+        console.log("✅ Brand added successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("❌ Error adding brand:", error);
+        throw error;
+      }
+    },
+
+    async getAllBrands() {
+      // const authStore = useAuthStore();
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/brands/", {
+          method: "GET",
+          headers: {
+            // Authorization: `Bearer ${authStore.token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Brands fetch failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("✅ Brands fetched successfully:", data);
+
+        // Store brands in state if you have a brands array
+        // this.brands = data;
+
+        return data;
+      } catch (error) {
+        console.error("❌ Error fetching brands:", error);
+        throw error;
+      }
+    },
+    async getAllCategories() {
+      const authStore = useAuthStore();
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/categories/", {
+          method: "GET",
+          headers: {
+            // Authorization: `Bearer ${authStore.token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Categories fetch failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("✅ Categories fetched successfully:", data);
+
+        // Store categories in state if you have a categories array
+        // this.categories = data;
+
+        return data;
+      } catch (error) {
+        console.error("❌ Error fetching categories:", error);
+        throw error;
+      }
+    },
+
+    async addCategory(categoryData: any) {
+      const authStore = useAuthStore();
+
+      try {
+        const category = {
+          name: categoryData.name,
+          parent_id: categoryData.parent_id || null,
+          description: categoryData.description || "",
+          image_url: categoryData.image_url || "",
+          is_active:
+            categoryData.is_active !== undefined
+              ? categoryData.is_active
+              : true,
+          sort_order: categoryData.sort_order || 0,
+        };
+
+        console.log(
+          "📤 Sending category data:",
+          JSON.stringify(category, null, 2)
+        );
+
+        const response = await fetch("http://127.0.0.1:8000/categories/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify(category),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Category creation failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("✅ Category added successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("❌ Error adding category:", error);
+        throw error;
+      }
+    },
+
+    async addSupplier(supplierData: any) {
+      const authStore = useAuthStore();
+
+      try {
+        const supplier = {
+          name: supplierData.name,
+          code: supplierData.code || "",
+          contact: {
+            name: supplierData.contact_name || "",
+            phone: supplierData.phone || "",
+            email: supplierData.email || "",
+            address: {
+              street: supplierData.street || "",
+              city: supplierData.city || "",
+              state: supplierData.state || "",
+              country: supplierData.country || "Kenya",
+              postal_code: supplierData.postal_code || "",
+            },
+          },
+          tax_id: supplierData.tax_id || "",
+          website: supplierData.website || "",
+          notes: supplierData.notes || "",
+          is_active:
+            supplierData.is_active !== undefined
+              ? supplierData.is_active
+              : true,
+        };
+
+        console.log(
+          "📤 Sending supplier data:",
+          JSON.stringify(supplier, null, 2)
+        );
+
+        const response = await fetch(
+          "http://127.0.0.1:8000/api/v1/suppliers/",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authStore.token}`,
+            },
+            body: JSON.stringify(supplier),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Supplier creation failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("✅ Supplier added successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("❌ Error adding supplier:", error);
+        throw error;
+      }
+    },
+    async getAllSuppliers() {
+      // const authStore = useAuthStore();
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/suppliers/", {
+          method: "GET",
+          headers: {
+            // Authorization: `Bearer ${authStore.token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Suppliers fetch failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("✅ Suppliers fetched successfully:", data);
+
+        // Store suppliers in state if you have a suppliers array
+        // this.suppliers = data;
+
+        return data;
+      } catch (error) {
+        console.error("❌ Error fetching suppliers:", error);
+        throw error;
+      }
+    },
+    async updateSupplier(supplierId: string, supplierData: any) {
+      const authStore = useAuthStore();
+
+      try {
+        const supplier = {
+          name: supplierData.name,
+          code: supplierData.code || "",
+          contact: {
+            name: supplierData.contact_name || "",
+            phone: supplierData.phone || "",
+            email: supplierData.email || "",
+            address: {
+              street: supplierData.street || "",
+              city: supplierData.city || "",
+              state: supplierData.state || "",
+              country: supplierData.country || "Kenya",
+              postal_code: supplierData.postal_code || "",
+            },
+          },
+          tax_id: supplierData.tax_id || "",
+          website: supplierData.website || "",
+          notes: supplierData.notes || "",
+          is_active:
+            supplierData.is_active !== undefined
+              ? supplierData.is_active
+              : true,
+        };
+
+        const response = await fetch(
+          `http://127.0.0.1:8000/suppliers/${supplierId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${authStore.token}`,
+            },
+            body: JSON.stringify(supplier),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Supplier update failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        const data = await response.json();
+        console.log("✅ Supplier updated successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("❌ Error updating supplier:", error);
+        throw error;
+      }
+    },
+
+    async deleteSupplier(supplierId: string) {
+      const authStore = useAuthStore();
+
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:8000/suppliers/${supplierId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("❌ Supplier delete failed:", errorText);
+          throw new Error(
+            `HTTP error! status: ${response.status} - ${errorText}`
+          );
+        }
+
+        console.log("✅ Supplier deleted successfully");
+        return true;
+      } catch (error) {
+        console.error("❌ Error deleting supplier:", error);
+        throw error;
+      }
+    },
+
+    async getAllOrders() {
+      const authStore = useAuthStore();
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/orders/", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${authStore.token}`,
+          },
+        });
+        const data = await response.json();
+        console.log("Orders fetched:", data);
         this.AllOrders = data;
         return data;
       } catch (error) {
@@ -164,13 +770,219 @@ export const usePosStore = defineStore("pos", {
       try {
         const response = await fetch("http://127.0.0.1:8000/products/");
         const data = await response.json();
-        console.log(data);
-        this.products = data;
+        console.log("Products fetched:", data);
+
+        // Map API products to the store format
+        this.products = data.map((product: any) => ({
+          ...product,
+          id: product.id || product._id,
+          // Map pricing
+          pricing: {
+            ...product.pricing,
+            selling_price: product.pricing?.selling_price || 0,
+            cost_price: product.pricing?.cost_price || 0,
+          },
+          // Map inventory
+          inventory: {
+            ...product.inventory,
+            quantity: product.inventory?.quantity || 0,
+            available: product.inventory?.available || 0,
+            status: product.inventory?.status || "in_stock",
+          },
+          // Use first tag as category fallback
+          category: product.tags?.[0] || "coffee",
+          price: product.pricing?.selling_price || 0,
+          image_url: product.image_url || product.media?.images?.[0]?.url || "",
+        }));
+
         return data;
       } catch (error) {
         console.error("Error fetching products:", error);
+        this.products = [];
+        return [];
       }
     },
+
+    async saveOrder(orderData: any) {
+      const authStore = useAuthStore();
+
+      try {
+        // Ensure we have the correct product IDs
+        const products = this.products || [];
+
+        const order = {
+          order_type: orderData.orderType || "takeaway",
+          customer_id: orderData.customerId || null,
+          customer_name: orderData.customerName || "Guest",
+          customer_phone: orderData.customerPhone || "",
+          customer_email: orderData.customerEmail || "",
+          table_number: orderData.tableNumber || null,
+          branch_id: orderData.branchId || null,
+          items: orderData.items.map((item: any) => {
+            let productId = item.productId || item.id;
+            let sku = item.sku || "";
+            let barcode = item.barcode || "";
+            let productName = item.name || item.product_name || "";
+
+            if (
+              productId &&
+              typeof productId === "string" &&
+              productId.length < 20
+            ) {
+              const foundProduct = products.find(
+                (p) => p.sku === productId || p.id === productId
+              );
+              if (foundProduct) {
+                productId = foundProduct.id || foundProduct._id;
+                sku = foundProduct.sku || sku;
+                barcode = foundProduct.barcode || barcode;
+                productName = foundProduct.name || productName;
+              }
+            }
+
+            return {
+              product_id: productId,
+              variant_id: item.variant_id || null,
+              product_name: productName,
+              sku: sku,
+              barcode: barcode,
+              quantity: item.quantity || 1,
+              unit_price: item.unitPrice || item.price || 0,
+              total_price:
+                (item.unitPrice || item.price || 0) * (item.quantity || 1),
+              cost_price: item.cost_price || null,
+              discount: item.discount || 0,
+              tax_amount: item.tax_amount || 0,
+              weight: item.weight || null,
+              batch_number: item.batch_number || null,
+              serial_numbers: item.serial_numbers || [],
+            };
+          }),
+          subtotal: orderData.subtotal || 0,
+          tax: orderData.tax || 0,
+          discount_total: orderData.discount_total || 0,
+          total: orderData.total || 0,
+          receipt_number: orderData.receiptNumber || null,
+          payment_mode: orderData.paymentMode || "cash",
+          // FIXED: Use 'paid' instead of 'completed'
+          payment_status: orderData.paymentStatus || "paid",
+          order_status: "completed", // This is correct for order_status
+          notes: orderData.notes || "",
+          created_at: new Date().toISOString(),
+          created_by: authStore.user?.id || null,
+          sales_agent: orderData.cashier || authStore.user?.name || "Cashier",
+        };
+
+        console.log("📤 Sending order data:", JSON.stringify(order, null, 2));
+
+        const res = await fetch("http://127.0.0.1:8000/orders/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify(order),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("❌ Order creation failed:", errorText);
+          console.error("❌ Status:", res.status);
+          console.error("❌ Status Text:", res.statusText);
+          throw new Error(`HTTP error! status: ${res.status} - ${errorText}`);
+        }
+
+        const data = await res.json();
+        console.log("✅ Order saved successfully:", data);
+        return data;
+      } catch (error) {
+        console.error("❌ Error saving order:", error);
+        throw error;
+      }
+    },
+
+    addToCart(product: any) {
+      // Find if product already in cart
+      const existingItem = this.cart.find(
+        (item) => item.productId === (product.id || product._id)
+      );
+
+      if (existingItem) {
+        existingItem.quantity += 1;
+      } else {
+        // Get price from product
+        const price = product.pricing?.selling_price || product.price || 0;
+
+        const newItem: CartItem = {
+          id: this.nextCartId++,
+          productId: product.id || product._id,
+          name: product.name,
+          sku: product.sku || "",
+          barcode: product.barcode || "",
+          variant_id: null,
+          size: "Regular",
+          temp: "Hot",
+          modifier: "Standard",
+          price: price,
+          quantity: 1,
+          unitPrice: price,
+        };
+
+        this.cart.push(newItem);
+        console.log("Added to cart:", newItem);
+      }
+    },
+
+    addVariantToCart(product: any, variant: any) {
+      const price =
+        variant.pricing?.selling_price || product.pricing?.selling_price || 0;
+
+      const newItem: CartItem = {
+        id: this.nextCartId++,
+        productId: product.id || product._id,
+        name: `${product.name} - ${variant.variant_name}`,
+        sku: variant.sku || product.sku || "",
+        barcode: variant.barcode || product.barcode || "",
+        variant_id: variant.sku || variant.id,
+        size: variant.attributes?.size || "Regular",
+        temp: "Hot",
+        modifier: variant.attributes?.flavor || "Standard",
+        price: price,
+        quantity: 1,
+        unitPrice: price,
+      };
+
+      this.cart.push(newItem);
+      console.log("Added variant to cart:", newItem);
+    },
+
+    incrementQuantity(itemId: number) {
+      const item = this.cart.find((i) => i.id === itemId);
+      if (item) {
+        item.quantity += 1;
+      }
+    },
+
+    decrementQuantity(itemId: number) {
+      const item = this.cart.find((i) => i.id === itemId);
+      if (item && item.quantity > 1) {
+        item.quantity--;
+      } else if (item && item.quantity === 1) {
+        this.removeFromCart(itemId);
+      }
+    },
+
+    removeFromCart(itemId: number) {
+      const index = this.cart.findIndex((i) => i.id === itemId);
+      if (index > -1) {
+        this.cart.splice(index, 1);
+      }
+    },
+
+    clearCart() {
+      this.cart = [];
+    },
+
     async updateDebtOrderStatus(orderId: string) {
       const authStore = useAuthStore();
 
@@ -192,14 +1004,6 @@ export const usePosStore = defineStore("pos", {
         }
         const data = await response.json();
         console.log("✅ Order status updated successfully:", data);
-        // Update the order in the local state
-        const orderIndex = this.AllOrders.findIndex(
-          (order) => order.id === orderId
-        );
-
-        if (orderIndex !== -1) {
-          this.AllOrders[orderIndex].paymentStatus = newStatus;
-        }
         return data;
       } catch (error) {
         console.error("❌ Error updating order status:", error);
@@ -234,96 +1038,10 @@ export const usePosStore = defineStore("pos", {
         throw error;
       }
     },
-    async saveOrder(orderData: any) {
-      try {
-        const order = {
-          receiptNumber: orderData.receiptNumber,
-          orderType: orderData.orderType,
-          customerName: orderData.customerName,
-          tableNumber: orderData.tableNumber,
-          items: JSON.parse(JSON.stringify(orderData.items)),
-          subtotal: orderData.subtotal,
-          tax: orderData.tax,
-          total: orderData.total,
-          paymentMode: orderData.paymentMode,
-          paymentStatus: orderData.paymentStatus,
-        };
-
-        const res = await fetch("http://127.0.0.1:8000/orders/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(order),
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
-        const data = await res.json();
-        console.log("✅ Order saved successfully:", data);
-        return data;
-      } catch (error) {
-        console.error("❌ Error saving order:", error);
-        throw error;
-      }
-    },
-
-    addToCart(product: Product) {
-      const existingItem = this.cart.find(
-        (item) => item.productId === product.id
-      );
-
-      if (existingItem) {
-        // FIXED: Only increment quantity
-        existingItem.quantity += 1;
-        console.log("Updated existing item:", existingItem);
-      } else {
-        const newItem: CartItem = {
-          id: this.nextCartId++,
-          productId: product.id,
-          name: product.name,
-          size: "SB.4.2",
-          temp: "Medium",
-          modifier: "Less Sugar",
-          price: product.price,
-          quantity: 1,
-          unitPrice: product.price,
-        };
-        console.log("Adding new item to cart:", newItem);
-        this.cart.push(newItem);
-      }
-    },
-
-    incrementQuantity(itemId: number) {
-      const item = this.cart.find((i) => i.id === itemId);
-      if (item) {
-        item.quantity += 1;
-        // FIXED: No price modification needed
-      }
-    },
-    removeFromCart(itemId: number) {
-      const index = this.cart.findIndex((i) => i.id === itemId);
-      if (index > -1) {
-        this.cart.splice(index, 1);
-      }
-    },
-
-    decrementQuantity(itemId: number) {
-      const item = this.cart.find((i) => i.id === itemId);
-      if (item && item.quantity > 1) {
-        item.quantity--;
-        // FIXED: No price modification needed
-      } else if (item && item.quantity === 1) {
-        this.removeFromCart(itemId);
-      }
-    },
-
-    clearCart() {
-      this.cart = [];
-    },
   },
 
-  persist: true, // Enable persistence using pinia-plugin-persistedstate
+  persist: {
+    storage: localStorage,
+    paths: ["cart", "paymentMode"],
+  },
 });
