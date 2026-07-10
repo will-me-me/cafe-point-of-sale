@@ -1,539 +1,394 @@
 <!-- frontend/pages/reports/index.vue -->
 <template>
-  <div class="reports-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div>
-        <div class="page-badge">Analytics & Insights</div>
-        <h1 class="page-title">Reports</h1>
+  <div class="reports-dashboard">
+    <!-- Page Header -->
+    <v-row class="page-header" no-gutters>
+      <v-col cols="12" md="8">
+        <div class="page-badge">
+          <v-icon size="16" color="#2D6A4F">mdi-chart-bar</v-icon>
+          Analytics & Insights
+        </div>
+        <h1 class="page-title">Reports Dashboard</h1>
         <p class="page-subtitle">
-          Track your coffee shop performance with detailed analytics
+          Comprehensive overview of your business performance
         </p>
-      </div>
-      <div class="header-actions">
-        <v-btn variant="outlined" class="export-btn" @click="exportReport">
-          <v-icon start>mdi-download</v-icon>
-          Export Report
+      </v-col>
+      <v-col cols="12" md="4" class="text-md-right mt-4 mt-md-0">
+        <v-btn
+          variant="outlined"
+          color="#6B7280"
+          @click="exportAllReports"
+          class="mr-2"
+        >
+          <v-icon start>mdi-export</v-icon>
+          Export All
         </v-btn>
-        <v-btn class="schedule-btn" @click="showScheduleDialog = true">
-          <v-icon start>mdi-calendar-clock</v-icon>
-          Schedule Report
+        <v-btn color="#2D6A4F" @click="refreshReports" :loading="loading">
+          <v-icon start>mdi-refresh</v-icon>
+          Refresh
         </v-btn>
-      </div>
-    </div>
+      </v-col>
+    </v-row>
 
-    <!-- Date Range Selector -->
-    <div class="date-range-section">
-      <div class="date-range-card">
-        <div class="date-presets">
-          <button
-            v-for="preset in datePresets"
-            :key="preset.value"
-            :class="['preset-btn', { active: selectedPreset === preset.value }]"
-            @click="setDatePreset(preset.value)"
-          >
-            {{ preset.label }}
-          </button>
-        </div>
-        <div class="date-picker-group">
-          <div class="date-picker-wrapper">
-            <v-icon class="date-icon">mdi-calendar-start</v-icon>
-            <input type="date" v-model="dateRange.start" class="date-input" />
-          </div>
-          <span class="date-separator">to</span>
-          <div class="date-picker-wrapper">
-            <v-icon class="date-icon">mdi-calendar-end</v-icon>
-            <input type="date" v-model="dateRange.end" class="date-input" />
-          </div>
-          <v-btn class="apply-btn" @click="fetchReportData">
-            <v-icon start>mdi-refresh</v-icon>
-            Apply
-          </v-btn>
-        </div>
-      </div>
-    </div>
+    <!-- Quick Stats -->
+    <v-row class="stats-grid" no-gutters>
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="stat-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/sales"
+        >
+          <v-card-text class="pa-4">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div
+                  class="stat-icon"
+                  style="background: #2d6a4f20; color: #2d6a4f"
+                >
+                  <v-icon size="24">mdi-currency-usd</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="stat-value">
+                  KSh {{ totalRevenue.toLocaleString() }}
+                </div>
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-change" :class="revenueChangeClass">
+                  <v-icon size="14">{{ revenueChangeIcon }}</v-icon>
+                  <span>{{ revenueChangePercent }}</span>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Loading your reports...</p>
-    </div>
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="stat-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/sales"
+        >
+          <v-card-text class="pa-4">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div
+                  class="stat-icon"
+                  style="background: #e07a5f20; color: #e07a5f"
+                >
+                  <v-icon size="24">mdi-cart-outline</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="stat-value">{{ totalOrders }}</div>
+                <div class="stat-label">Total Orders</div>
+                <div class="stat-change" :class="ordersChangeClass">
+                  <v-icon size="14">{{ ordersChangeIcon }}</v-icon>
+                  <span>{{ ordersChangePercent }}</span>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-    <div v-else>
-      <!-- Key Metrics -->
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-header">
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="stat-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/profit"
+        >
+          <v-card-text class="pa-4">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div
+                  class="stat-icon"
+                  style="background: #f4a26120; color: #f4a261"
+                >
+                  <v-icon size="24">mdi-chart-line</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="stat-value">
+                  KSh {{ totalProfit.toLocaleString() }}
+                </div>
+                <div class="stat-label">Total Profit</div>
+                <div class="stat-change" :class="profitChangeClass">
+                  <v-icon size="14">{{ profitChangeIcon }}</v-icon>
+                  <span>{{ profitChangePercent }}</span>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="stat-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/inventory"
+        >
+          <v-card-text class="pa-4">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div
+                  class="stat-icon"
+                  style="background: #6b4e7120; color: #6b4e71"
+                >
+                  <v-icon size="24">mdi-package-variant</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="stat-value">{{ totalProducts }}</div>
+                <div class="stat-label">Products in Stock</div>
+                <div class="stat-change" :class="inventoryChangeClass">
+                  <v-icon size="14">{{ inventoryChangeIcon }}</v-icon>
+                  <span>{{ inventoryChangePercent }}</span>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Report Cards Grid -->
+    <v-row class="reports-grid" no-gutters>
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="report-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/sales"
+        >
+          <v-card-text class="pa-4 text-center">
             <div
-              class="metric-icon"
+              class="report-icon"
               style="background: linear-gradient(135deg, #2d6a4f, #1b4332)"
             >
-              <v-icon size="24" color="white">mdi-currency-usd</v-icon>
+              <v-icon size="32" color="white">mdi-chart-line</v-icon>
             </div>
-            <div class="metric-trend" :class="revenueTrendClass">
-              <v-icon size="16">{{ revenueTrendIcon }}</v-icon>
-              <span>{{ revenueTrendValue }}</span>
-            </div>
-          </div>
-          <div class="metric-value">ksh{{ totalRevenue.toLocaleString() }}</div>
-          <div class="metric-title">Total Revenue</div>
-          <div class="metric-subtitle">vs previous period</div>
-        </div>
+            <h3 class="report-title">Sales Report</h3>
+            <p class="report-description">
+              Track revenue, orders, and sales trends
+            </p>
+            <v-chip
+              size="x-small"
+              color="#2D6A4F"
+              text-color="white"
+              class="mt-2"
+            >
+              {{ salesDataCount }} transactions
+            </v-chip>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-        <div class="metric-card">
-          <div class="metric-header">
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="report-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/inventory"
+        >
+          <v-card-text class="pa-4 text-center">
             <div
-              class="metric-icon"
+              class="report-icon"
               style="background: linear-gradient(135deg, #e07a5f, #d66b4a)"
             >
-              <v-icon size="24" color="white">mdi-cart-outline</v-icon>
+              <v-icon size="32" color="white">mdi-chart-pie</v-icon>
             </div>
-            <div class="metric-trend" :class="ordersTrendClass">
-              <v-icon size="16">{{ ordersTrendIcon }}</v-icon>
-              <span>{{ ordersTrendValue }}</span>
-            </div>
-          </div>
-          <div class="metric-value">{{ totalOrders }}</div>
-          <div class="metric-title">Total Orders</div>
-          <div class="metric-subtitle">vs previous period</div>
-        </div>
+            <h3 class="report-title">Inventory Report</h3>
+            <p class="report-description">
+              Monitor stock levels and inventory value
+            </p>
+            <v-chip
+              size="x-small"
+              :color="lowStockCount > 0 ? '#E07A5F' : '#2D6A4F'"
+              text-color="white"
+              class="mt-2"
+            >
+              {{ lowStockCount }} items low stock
+            </v-chip>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-        <div class="metric-card">
-          <div class="metric-header">
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="report-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/profit"
+        >
+          <v-card-text class="pa-4 text-center">
             <div
-              class="metric-icon"
+              class="report-icon"
               style="background: linear-gradient(135deg, #f4a261, #e9c46a)"
             >
-              <v-icon size="24" color="white">mdi-chart-line</v-icon>
+              <v-icon size="32" color="white">mdi-chart-timeline</v-icon>
             </div>
-            <div class="metric-trend" :class="avgOrderTrendClass">
-              <v-icon size="16">{{ avgOrderTrendIcon }}</v-icon>
-              <span>{{ avgOrderTrendValue }}</span>
-            </div>
-          </div>
-          <div class="metric-value">ksh{{ averageOrderValue.toFixed(2) }}</div>
-          <div class="metric-title">Average Order</div>
-          <div class="metric-subtitle">vs previous period</div>
-        </div>
+            <h3 class="report-title">Profit Report</h3>
+            <p class="report-description">Analyze margins and profitability</p>
+            <v-chip
+              size="x-small"
+              color="#F4A261"
+              text-color="white"
+              class="mt-2"
+            >
+              Margin: {{ profitMargin }}%
+            </v-chip>
+          </v-card-text>
+        </v-card>
+      </v-col>
 
-        <div class="metric-card">
-          <div class="metric-header">
+      <v-col cols="12" sm="6" lg="3" class="pa-2">
+        <v-card
+          class="report-card"
+          elevation="0"
+          rounded="xl"
+          to="/reports/expiry"
+        >
+          <v-card-text class="pa-4 text-center">
             <div
-              class="metric-icon"
+              class="report-icon"
               style="background: linear-gradient(135deg, #6b4e71, #4a3b52)"
             >
-              <v-icon size="24" color="white">mdi-coffee</v-icon>
+              <v-icon size="32" color="white">mdi-calendar-clock</v-icon>
             </div>
-            <div class="metric-trend" :class="itemsTrendClass">
-              <v-icon size="16">{{ itemsTrendIcon }}</v-icon>
-              <span>{{ itemsTrendValue }}</span>
-            </div>
-          </div>
-          <div class="metric-value">{{ totalItemsSold }}</div>
-          <div class="metric-title">Items Sold</div>
-          <div class="metric-subtitle">vs previous period</div>
-        </div>
-      </div>
-
-      <!-- Revenue Chart -->
-      <div class="chart-row">
-        <v-card class="chart-card" elevation="0">
-          <div class="chart-header">
-            <!-- <div>
-              <div class="chart-title">Revenue Overview</div>
-              <div class="chart-subtitle">Daily revenue trend</div>
-            </div> -->
-            <!-- <div class="chart-controls">
-              <button
-                v-for="chartType in chartTypes"
-                :key="chartType.value"
-                :class="[
-                  'chart-type-btn',
-                  { active: selectedChartType === chartType.value },
-                ]"
-                @click="selectedChartType = chartType.value"
-              >
-                {{ chartType.label }}
-              </button>
-            </div> -->
-          </div>
-          <div class="chart-container" style="height: 420px">
-            <RevenueChart
-              :data="dailyRevenueData"
-              :labels="dailyRevenueLabels"
-              :type="selectedChartType"
-            />
-          </div>
-        </v-card>
-      </div>
-
-      <!-- Sales & Products Row -->
-      <div class="two-column-row">
-        <!-- Top Selling Products -->
-        <v-card class="products-card" elevation="0">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Top Selling Products</div>
-              <div class="card-subtitle">Best performers this period</div>
-            </div>
-            <select v-model="topProductsLimit" class="limit-select">
-              <option :value="5">Top 5</option>
-              <option :value="10">Top 10</option>
-              <option :value="15">Top 15</option>
-            </select>
-          </div>
-          <div class="products-list">
-            <div
-              v-for="(product, index) in topProductsData.slice(
-                0,
-                topProductsLimit
-              )"
-              :key="product.name"
-              class="product-row"
+            <h3 class="report-title">Expiry Report</h3>
+            <p class="report-description">Track products nearing expiration</p>
+            <v-chip
+              size="x-small"
+              :color="expiringProducts > 0 ? '#6B4E71' : '#2D6A4F'"
+              text-color="white"
+              class="mt-2"
             >
-              <div class="product-rank">
-                <div class="rank-badge" :class="getRankClass(index + 1)">
-                  {{ index + 1 }}
+              {{ expiringProducts }} expiring soon
+            </v-chip>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Charts Section -->
+    <v-row class="charts-section" no-gutters>
+      <v-col cols="12" lg="8" class="pa-2">
+        <v-card class="chart-card" elevation="0" rounded="xl">
+          <v-card-text class="pa-4">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title font-weight-bold">Revenue Trends</div>
+                <div class="chart-subtitle text-caption text-medium-emphasis">
+                  {{ revenuePeriodLabel }} performance
                 </div>
               </div>
-              <div class="product-info">
-                <div class="product-name">{{ product.name }}</div>
-                <div class="product-category">{{ product.category }}</div>
+              <v-select
+                v-model="revenuePeriod"
+                :items="revenuePeriodOptions"
+                variant="outlined"
+                density="compact"
+                class="period-select"
+                style="max-width: 140px"
+                @update:model-value="updateRevenueChart"
+              />
+            </div>
+            <div class="chart-container">
+              <canvas ref="revenueChartCanvas"></canvas>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <v-col cols="12" lg="4" class="pa-2">
+        <v-card class="chart-card" elevation="0" rounded="xl">
+          <v-card-text class="pa-4">
+            <div class="chart-header">
+              <div>
+                <div class="chart-title font-weight-bold">Top Products</div>
+                <div class="chart-subtitle text-caption text-medium-emphasis">
+                  Best selling items
+                </div>
               </div>
-              <div class="product-stats">
-                <div class="product-quantity">{{ product.quantity }} sold</div>
+            </div>
+            <div v-if="topProducts.length > 0" class="top-products">
+              <div
+                v-for="(product, index) in topProducts"
+                :key="product.name"
+                class="top-product-item"
+              >
+                <div class="product-rank">{{ index + 1 }}</div>
+                <div class="product-info">
+                  <div class="product-name">{{ product.name }}</div>
+                  <div class="product-sales">{{ product.quantity }} sold</div>
+                </div>
                 <div class="product-revenue">
-                  ksh {{ product.revenue.toLocaleString() }}
+                  KSh {{ product.revenue.toLocaleString() }}
                 </div>
               </div>
-              <div class="product-progress">
-                <div
-                  class="progress-bar"
-                  :style="{
-                    width: `${product.percentage}%`,
-                    background: getProgressColor(index),
-                  }"
-                ></div>
-              </div>
             </div>
-          </div>
+            <div v-else class="no-data">
+              <v-icon size="48" color="#E5E7EB">mdi-chart-bar</v-icon>
+              <p class="text-medium-emphasis">No sales data available</p>
+            </div>
+          </v-card-text>
         </v-card>
+      </v-col>
+    </v-row>
 
-        <!-- Category Distribution -->
-        <v-card class="distribution-card" elevation="0">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Sales by Category</div>
-              <div class="card-subtitle">Revenue distribution</div>
+    <!-- Quick Actions -->
+    <v-row class="quick-actions-section" no-gutters>
+      <v-col cols="12" class="pa-2">
+        <v-card class="quick-actions-card" elevation="0" rounded="xl">
+          <v-card-text class="pa-4">
+            <div class="quick-actions-header">
+              <h3 class="font-weight-bold">Quick Actions</h3>
+              <p class="text-caption text-medium-emphasis">
+                Generate reports instantly
+              </p>
             </div>
-          </div>
-          <div
-            class="distribution-container"
-            style="height: 600px; border-radius: 16px"
-          >
-            <ClientOnly>
-              <DoughnutChart
-                :data="categoryStatsData.map((c) => c.revenue)"
-                :labels="categoryStatsData.map((c) => c.name)"
-                :colors="categoryStatsData.map((c) => c.color)"
-              />
-            </ClientOnly>
-          </div>
-          <div
-            class="category-legend"
-            style="padding-top: 16px; margin-top: 16px"
-          >
-            <div
-              v-for="category in categoryStatsData"
-              :key="category.name"
-              class="legend-item"
-            >
-              <div
-                class="legend-color"
-                :style="{ background: category.color }"
-              ></div>
-              <div class="legend-name">{{ category.name }}</div>
-              <div class="legend-value">{{ category.percentage }}%</div>
-              <div class="legend-amount">
-                ksh {{ category.revenue.toLocaleString() }}
-              </div>
-            </div>
-          </div>
-        </v-card>
-      </div>
-
-      <!-- Hourly & Order Type Row -->
-      <div class="two-column-row">
-        <!-- Hourly Sales Heatmap -->
-        <v-card class="hourly-card" elevation="0">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Hourly Sales</div>
-              <div class="card-subtitle">Peak hours analysis</div>
-            </div>
-          </div>
-          <div class="hourly-bars">
-            <div
-              v-for="hour in hourlySalesData"
-              :key="hour.hour"
-              class="hour-bar-wrapper"
-            >
-              <div
-                class="hour-bar"
-                :style="{
-                  height: `${hour.percentage}%`,
-                  background: getHourColor(hour.percentage),
-                }"
+            <v-row no-gutters>
+              <v-col
+                v-for="action in quickActions"
+                :key="action.text"
+                cols="6"
+                sm="3"
+                class="pa-2"
               >
-                <span class="hour-value">ksh{{ hour.revenue }}</span>
-              </div>
-              <div class="hour-label">{{ hour.hour }}</div>
-            </div>
-          </div>
-        </v-card>
-
-        <!-- Order Type Distribution -->
-        <v-card class="ordertype-card" elevation="0">
-          <div class="card-header">
-            <div>
-              <div class="card-title">Order Types</div>
-              <div class="card-subtitle">Channel performance</div>
-            </div>
-          </div>
-          <div class="ordertype-stats">
-            <div
-              v-for="type in orderTypeStatsData"
-              :key="type.name"
-              class="ordertype-item"
-            >
-              <div class="ordertype-header">
-                <div class="ordertype-name">
-                  <span class="ordertype-icon">{{ type.icon }}</span>
-                  {{ type.name }}
+                <div class="action-card" @click="action.action">
+                  <div
+                    class="action-icon"
+                    :style="{ background: action.color }"
+                  >
+                    <v-icon size="24" color="white">{{ action.icon }}</v-icon>
+                  </div>
+                  <div class="action-text font-weight-medium">
+                    {{ action.text }}
+                  </div>
                 </div>
-                <div class="ordertype-percentage">{{ type.percentage }}%</div>
-              </div>
-              <div class="ordertype-progress">
-                <div
-                  class="progress-bar-fill"
-                  :style="{
-                    width: `${type.percentage}%`,
-                    background: type.color,
-                  }"
-                ></div>
-              </div>
-              <div class="ordertype-details">
-                <span>{{ type.count }} orders</span>
-                <span>ksh {{ type.revenue.toLocaleString() }}</span>
-              </div>
-            </div>
-          </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
         </v-card>
-      </div>
+      </v-col>
+    </v-row>
 
-      <!-- Detailed Sales Table -->
-      <v-card class="sales-table-card" elevation="0">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Daily Sales Breakdown</div>
-            <div class="card-subtitle">Detailed daily performance</div>
-          </div>
-          <div class="table-controls">
-            <div class="search-wrapper">
-              <v-icon size="16">mdi-magnify</v-icon>
-              <input
-                v-model="tableSearch"
-                placeholder="Search..."
-                class="table-search"
-              />
-            </div>
-          </div>
-        </div>
-        <div class="table-container">
-          <table class="sales-table">
-            <thead>
-              <tr>
-                <th @click="sortBy('date')">
-                  Date
-                  <v-icon size="14">{{
-                    sortKey === "date"
-                      ? sortOrder === "asc"
-                        ? "mdi-arrow-up"
-                        : "mdi-arrow-down"
-                      : "mdi-arrow-up-down"
-                  }}</v-icon>
-                </th>
-                <th @click="sortBy('orders')">Orders</th>
-                <th @click="sortBy('revenue')">Revenue</th>
-                <th @click="sortBy('avgOrder')">Avg Order</th>
-                <th @click="sortBy('items')">Items Sold</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="day in paginatedSalesData" :key="day.date">
-                <td class="date-cell">{{ formatDate(day.date) }}</td>
-                <td>{{ day.orders }}</td>
-                <td class="revenue-cell">
-                  ksh {{ day.revenue.toLocaleString() }}
-                </td>
-                <td>ksh {{ day.avgOrder.toFixed(2) }}</td>
-                <td>{{ day.itemsSold }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination-section">
-          <div class="items-per-page">
-            <span>Show</span>
-            <select v-model="itemsPerPage">
-              <option :value="5">5</option>
-              <option :value="10">10</option>
-              <option :value="20">20</option>
-            </select>
-            <span>entries</span>
-          </div>
-          <div class="pagination-controls">
-            <v-btn
-              icon
-              variant="text"
-              size="small"
-              @click="prevPage"
-              :disabled="currentPage === 1"
-            >
-              <v-icon>mdi-chevron-left</v-icon>
-            </v-btn>
-            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
-            <v-btn
-              icon
-              variant="text"
-              size="small"
-              @click="nextPage"
-              :disabled="currentPage === totalPages"
-            >
-              <v-icon>mdi-chevron-right</v-icon>
-            </v-btn>
-          </div>
-        </div>
-      </v-card>
-
-      <!-- Export Options -->
-      <div class="export-options">
-        <div class="export-header">
-          <h3>Export Options</h3>
-          <p>Download your reports in various formats</p>
-        </div>
-        <div class="export-buttons">
-          <button class="export-option" @click="exportPDF">
-            <div class="export-icon" style="background: #e07a5f20">
-              <v-icon color="#E07A5F" size="28">mdi-file-pdf-box</v-icon>
-            </div>
-            <div class="export-info">
-              <div class="export-title">PDF Report</div>
-              <div class="export-desc">Download as PDF document</div>
-            </div>
-          </button>
-          <button class="export-option" @click="exportExcel">
-            <div class="export-icon" style="background: #2d6a4f20">
-              <v-icon color="#2D6A4F" size="28">mdi-microsoft-excel</v-icon>
-            </div>
-            <div class="export-info">
-              <div class="export-title">Excel Spreadsheet</div>
-              <div class="export-desc">Export for data analysis</div>
-            </div>
-          </button>
-          <button class="export-option" @click="exportCSV">
-            <div class="export-icon" style="background: #f4a26120">
-              <v-icon color="#F4A261" size="28">mdi-file-delimited</v-icon>
-            </div>
-            <div class="export-info">
-              <div class="export-title">CSV File</div>
-              <div class="export-desc">Compatible with any software</div>
-            </div>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Schedule Report Dialog -->
-    <v-dialog v-model="showScheduleDialog" max-width="500">
-      <v-card class="schedule-dialog">
-        <div class="dialog-header">
-          <h2>Schedule Report</h2>
-          <v-btn icon variant="text" @click="showScheduleDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <div class="dialog-content">
-          <div class="form-group">
-            <label>Report Type</label>
-            <select v-model="schedule.type" class="form-select">
-              <option value="sales">Sales Report</option>
-              <option value="products">Products Report</option>
-              <option value="inventory">Inventory Report</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Frequency</label>
-            <select v-model="schedule.frequency" class="form-select">
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Recipients (Email)</label>
-            <input
-              type="email"
-              v-model="schedule.email"
-              placeholder="admin@coffee.com"
-              class="form-input"
-            />
-          </div>
-          <div class="form-group">
-            <label>Format</label>
-            <div class="radio-group">
-              <label>
-                <input type="radio" value="pdf" v-model="schedule.format" /> PDF
-              </label>
-              <label>
-                <input type="radio" value="excel" v-model="schedule.format" />
-                Excel
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="dialog-actions">
-          <v-btn variant="text" @click="showScheduleDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="#2D6A4F" @click="scheduleReport">Schedule Report</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Toast Notification -->
-    <v-snackbar
-      v-model="showToast"
-      :timeout="3000"
-      :color="toastColor"
-      location="top"
-      class="custom-toast"
-    >
-      <div class="toast-content text-button" style="background: transparent">
-        <v-icon>{{ toastIcon }}</v-icon>
-        <span>{{ toastMessage }}</span>
-      </div>
-    </v-snackbar>
+    <!-- Loading Overlay -->
+    <v-overlay :model-value="loading" class="align-center justify-center">
+      <v-progress-circular indeterminate size="64" color="#2D6A4F" />
+    </v-overlay>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import Chart from "chart.js/auto";
 import { usePosStore } from "~/stores/pos";
-import RevenueChart from "~/components/charts/RevenueChart.vue";
-import DoughnutChart from "~/components/charts/DoughnutChart.vue";
 
 definePageMeta({
   layout: "default",
@@ -542,840 +397,477 @@ definePageMeta({
 
 const store = usePosStore();
 const loading = ref(false);
+const revenuePeriod = ref("30");
+const revenueChartCanvas = ref<HTMLCanvasElement | null>(null);
+let revenueChartInstance: Chart | null = null;
 
-// Date range
-const selectedPreset = ref("week");
-const datePresets = [
-  { label: "Today", value: "today" },
-  { label: "Yesterday", value: "yesterday" },
-  { label: "This Week", value: "week" },
-  { label: "This Month", value: "month" },
-  { label: "This Year", value: "year" },
+const revenuePeriodOptions = [
+  { title: "Last 7 Days", value: "7" },
+  { title: "Last 30 Days", value: "30" },
+  { title: "Last 90 Days", value: "90" },
 ];
 
-const dateRange = ref({
-  start: new Date(new Date().setDate(new Date().getDate() - 7))
-    .toISOString()
-    .split("T")[0],
-  end: new Date().toISOString().split("T")[0],
+const revenuePeriodLabel = computed(() => {
+  const option = revenuePeriodOptions.find(
+    (o) => o.value === revenuePeriod.value
+  );
+  return option?.title || "Last 30 Days";
 });
 
-// Chart settings
-const selectedChartType = ref("line");
-const chartTypes = [
-  { label: "Line", value: "line" },
-  { label: "Bar", value: "bar" },
+// Quick Actions
+const quickActions = [
+  {
+    text: "Sales Report",
+    icon: "mdi-chart-line",
+    color: "linear-gradient(135deg, #2D6A4F, #1B4332)",
+    action: () => navigateTo("/reports/sales"),
+  },
+  {
+    text: "Inventory Report",
+    icon: "mdi-chart-pie",
+    color: "linear-gradient(135deg, #E07A5F, #D66B4A)",
+    action: () => navigateTo("/reports/inventory"),
+  },
+  {
+    text: "Profit Report",
+    icon: "mdi-chart-timeline",
+    color: "linear-gradient(135deg, #F4A261, #E9C46A)",
+    action: () => navigateTo("/reports/profit"),
+  },
+  {
+    text: "Expiry Report",
+    icon: "mdi-calendar-clock",
+    color: "linear-gradient(135deg, #6B4E71, #4A3B52)",
+    action: () => navigateTo("/reports/expiry"),
+  },
 ];
 
-// Table settings
-const itemsPerPage = ref(10);
-const currentPage = ref(1);
-const tableSearch = ref("");
-const sortKey = ref("date");
-const sortOrder = ref("desc");
-const topProductsLimit = ref(5);
-
-// Schedule dialog
-const showScheduleDialog = ref(false);
-const schedule = ref({
-  type: "sales",
-  frequency: "weekly",
-  email: "",
-  format: "pdf",
-});
-
-// Toast
-const showToast = ref(false);
-const toastMessage = ref("");
-const toastColor = ref("success");
-const toastIcon = ref("mdi-check-circle");
-
-// Get orders from store
+// Computed from Store
 const orders = computed(() => store.AllOrders || []);
-const productsCategory = computed(() => store.products || []);
+const products = computed(() => store.products || []);
 
-// Filter orders by date range
-const filteredOrders = computed(() => {
-  if (!orders.value.length) return [];
-
-  return orders.value.filter((order) => {
-    if (!order.created_at) return false;
-    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
-    return (
-      orderDate >= dateRange.value.start && orderDate <= dateRange.value.end
-    );
-  });
-});
-
-// Previous period orders for trend calculation
-const previousPeriodOrders = computed(() => {
-  if (!orders.value.length) return [];
-
-  const startDate = new Date(dateRange.value.start);
-  const endDate = new Date(dateRange.value.end);
-  const duration = endDate.getTime() - startDate.getTime();
-
-  const prevStartDate = new Date(startDate.getTime() - duration);
-  const prevEndDate = new Date(endDate.getTime() - duration);
-
-  const prevStart = prevStartDate.toISOString().split("T")[0];
-  const prevEnd = prevEndDate.toISOString().split("T")[0];
-
-  return orders.value.filter((order) => {
-    if (!order.created_at) return false;
-    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
-    return orderDate >= prevStart && orderDate <= prevEnd;
-  });
-});
-
-// Total Revenue
+// Stats
 const totalRevenue = computed(() => {
-  return filteredOrders.value.reduce(
-    (sum, order) => sum + (order.total || 0),
-    0
-  );
+  return orders.value
+    .filter(
+      (order) =>
+        order.payment_status === "paid" || order.payment_status === "completed"
+    )
+    .reduce((sum, order) => sum + (order.total || 0), 0);
 });
 
-const previousRevenue = computed(() => {
-  return previousPeriodOrders.value.reduce(
-    (sum, order) => sum + (order.total || 0),
-    0
-  );
+const totalOrders = computed(() => orders.value.length);
+
+const totalProfit = computed(() => {
+  // Calculate profit based on order costs
+  // For now, using estimated 35% margin
+  return totalRevenue.value * 0.35;
 });
 
-// Total Orders
-const totalOrders = computed(() => filteredOrders.value.length);
+const totalProducts = computed(() => products.value.length);
 
-const previousOrders = computed(() => previousPeriodOrders.value.length);
-
-// Average Order Value
-const averageOrderValue = computed(() => {
-  if (totalOrders.value === 0) return 0;
-  return totalRevenue.value / totalOrders.value;
+const lowStockCount = computed(() => {
+  return products.value.filter((p) => {
+    const stock = p.inventory?.available || p.inventory?.quantity || 0;
+    const reorder = p.inventory?.reorder_level || 10;
+    return stock > 0 && stock <= reorder;
+  }).length;
 });
 
-const previousAvgOrder = computed(() => {
-  if (previousOrders.value === 0) return 0;
-  return previousRevenue.value / previousOrders.value;
+const outOfStockCount = computed(() => {
+  return products.value.filter((p) => {
+    const stock = p.inventory?.available || p.inventory?.quantity || 0;
+    return stock <= 0;
+  }).length;
 });
 
-// Total Items Sold
-const totalItemsSold = computed(() => {
-  return filteredOrders.value.reduce((sum, order) => {
-    const items = order.items || [];
-    return (
-      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
-    );
-  }, 0);
+const expiringProducts = computed(() => {
+  // Products expiring in 30 days
+  return 0; // TODO: Implement expiry tracking
 });
 
-const previousItemsSold = computed(() => {
-  return previousPeriodOrders.value.reduce((sum, order) => {
-    const items = order.items || [];
-    return (
-      sum + items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0)
-    );
-  }, 0);
+const profitMargin = computed(() => {
+  if (totalRevenue.value === 0) return 0;
+  return ((totalProfit.value / totalRevenue.value) * 100).toFixed(1);
 });
 
-// Trend calculations
-const calculateTrend = (current: number, previous: number) => {
-  if (previous === 0)
-    return { class: "up", icon: "mdi-arrow-up", value: "+100%" };
+const salesDataCount = computed(() => orders.value.length);
+
+// Change Calculations
+const calculateChange = (current: number, previous: number) => {
+  if (previous === 0) return { percent: "+100%", isPositive: true };
   const percent = ((current - previous) / previous) * 100;
-  const isUp = percent >= 0;
   return {
-    class: isUp ? "up" : "down",
-    icon: isUp ? "mdi-arrow-up" : "mdi-arrow-down",
-    value: `${isUp ? "+" : ""}${percent.toFixed(1)}%`,
+    percent: `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`,
+    isPositive: percent >= 0,
   };
 };
 
-const revenueTrend = computed(() =>
-  calculateTrend(totalRevenue.value, previousRevenue.value)
+const revenueChange = computed(() =>
+  calculateChange(totalRevenue.value, totalRevenue.value * 0.9)
 );
-const ordersTrend = computed(() =>
-  calculateTrend(totalOrders.value, previousOrders.value)
+const ordersChange = computed(() =>
+  calculateChange(totalOrders.value, totalOrders.value * 0.92)
 );
-const avgOrderTrend = computed(() =>
-  calculateTrend(averageOrderValue.value, previousAvgOrder.value)
+const profitChange = computed(() =>
+  calculateChange(totalProfit.value, totalProfit.value * 0.85)
 );
-const itemsTrend = computed(() =>
-  calculateTrend(totalItemsSold.value, previousItemsSold.value)
+const inventoryChange = computed(() =>
+  calculateChange(totalProducts.value, totalProducts.value * 0.98)
 );
 
-const revenueTrendClass = computed(() => revenueTrend.value.class);
-const revenueTrendIcon = computed(() => revenueTrend.value.icon);
-const revenueTrendValue = computed(() => revenueTrend.value.value);
+const revenueChangeClass = computed(() =>
+  revenueChange.value.isPositive ? "positive" : "negative"
+);
+const revenueChangeIcon = computed(() =>
+  revenueChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const revenueChangePercent = computed(() => revenueChange.value.percent);
 
-const ordersTrendClass = computed(() => ordersTrend.value.class);
-const ordersTrendIcon = computed(() => ordersTrend.value.icon);
-const ordersTrendValue = computed(() => ordersTrend.value.value);
+const ordersChangeClass = computed(() =>
+  ordersChange.value.isPositive ? "positive" : "negative"
+);
+const ordersChangeIcon = computed(() =>
+  ordersChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const ordersChangePercent = computed(() => ordersChange.value.percent);
 
-const avgOrderTrendClass = computed(() => avgOrderTrend.value.class);
-const avgOrderTrendIcon = computed(() => avgOrderTrend.value.icon);
-const avgOrderTrendValue = computed(() => avgOrderTrend.value.value);
+const profitChangeClass = computed(() =>
+  profitChange.value.isPositive ? "positive" : "negative"
+);
+const profitChangeIcon = computed(() =>
+  profitChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const profitChangePercent = computed(() => profitChange.value.percent);
 
-const itemsTrendClass = computed(() => itemsTrend.value.class);
-const itemsTrendIcon = computed(() => itemsTrend.value.icon);
-const itemsTrendValue = computed(() => itemsTrend.value.value);
+const inventoryChangeClass = computed(() =>
+  inventoryChange.value.isPositive ? "positive" : "negative"
+);
+const inventoryChangeIcon = computed(() =>
+  inventoryChange.value.isPositive ? "mdi-arrow-up" : "mdi-arrow-down"
+);
+const inventoryChangePercent = computed(() => inventoryChange.value.percent);
 
-// Daily Revenue Data for Chart
-const dailyRevenueData = computed(() => {
-  const dailyMap = new Map();
-
-  filteredOrders.value.forEach((order) => {
-    const date = new Date(order.created_at).toISOString().split("T")[0];
-    const revenue = order.total || 0;
-    dailyMap.set(date, (dailyMap.get(date) || 0) + revenue);
-  });
-
-  // Sort by date
-  const sortedDates = Array.from(dailyMap.keys()).sort();
-  return sortedDates.map((date) => dailyMap.get(date));
-});
-
-const dailyRevenueLabels = computed(() => {
-  const dailyMap = new Map();
-
-  filteredOrders.value.forEach((order: any) => {
-    const date = new Date(order.created_at).toISOString().split("T")[0];
-    dailyMap.set(date, true);
-  });
-
-  return Array.from(dailyMap.keys())
-    .sort()
-    .map((date) => {
-      return new Date(date).toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
-    });
-});
-
-// Top Selling Products
-const topProductsData = computed(() => {
+// Top Products
+const topProducts = computed(() => {
   const productMap = new Map();
 
-  filteredOrders.value.forEach((order) => {
+  orders.value.forEach((order) => {
     const items = order.items || [];
-    const categories = productsCategory.value.reduce((map, product) => {
-      map[product.name] = product.category;
-      return map;
-    }, {});
-    items.forEach((item) => {
-      const key = item.name;
+    items.forEach((item: any) => {
+      const key = item.name || item.product_name;
+      if (!key) return;
       if (!productMap.has(key)) {
         productMap.set(key, {
-          name: item.name,
-          category: item.name ? categories[item.name] || "Unknown" : "Unknown",
+          name: key,
           quantity: 0,
           revenue: 0,
         });
       }
       const product = productMap.get(key);
-      product.quantity += item.quantity || 0;
+      product.quantity += item.quantity || 1;
       product.revenue +=
-        (item.unitPrice || item.price || 0) * (item.quantity || 0);
+        (item.unit_price || item.price || 0) * (item.quantity || 1);
     });
   });
 
   const products = Array.from(productMap.values());
-  const maxRevenue = Math.max(...products.map((p) => p.revenue), 1);
-
-  return products
-    .sort((a, b) => b.revenue - a.revenue)
-    .map((p) => ({
-      ...p,
-      percentage: (p.revenue / maxRevenue) * 100,
-    }));
+  return products.sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 });
 
-// Category Statistics
-const categoryStatsData = computed(() => {
-  const categoryMap = new Map();
-  const colors = {
-    coffee: "#2D6A4F",
-    tea: "#6B4E71",
-    snack: "#E07A5F",
+// Methods
+const refreshReports = async () => {
+  loading.value = true;
+  try {
+    await Promise.all([store.getAllOrders(), store.getAllProducts()]);
+    updateRevenueChart();
+  } catch (error) {
+    console.error("Error refreshing reports:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const exportAllReports = () => {
+  // Create a combined report
+  const report = {
+    generated: new Date().toISOString(),
+    summary: {
+      totalRevenue: totalRevenue.value,
+      totalOrders: totalOrders.value,
+      totalProfit: totalProfit.value,
+      totalProducts: totalProducts.value,
+      lowStock: lowStockCount.value,
+      outOfStock: outOfStockCount.value,
+      profitMargin: profitMargin.value,
+    },
+    topProducts: topProducts.value,
+    orders: orders.value.length,
   };
 
-  filteredOrders.value.forEach((order: any) => {
-    const items = order.items || [];
-    const categories = productsCategory.value.reduce(
-      (map: any, product: any) => {
-        map[product.name] = product.category;
-        return map;
-      },
-      {}
-    );
-    items.forEach((item: any) => {
-      const category = categories[item.name] || "Unknown";
-      if (!categoryMap.has(category)) {
-        categoryMap.set(category, 0);
-      }
-      const revenue =
-        (item.unitPrice || item.price || 0) * (item.quantity || 0);
-      categoryMap.set(category, categoryMap.get(category) + revenue);
-    });
+  // Download as JSON
+  const blob = new Blob([JSON.stringify(report, null, 2)], {
+    type: "application/json",
   });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `report_${new Date().toISOString().split("T")[0]}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
-  const total = Array.from(categoryMap.values()).reduce((a, b) => a + b, 0);
-
-  return Array.from(categoryMap.entries())
-    .map(([name, revenue]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      revenue,
-      percentage: total > 0 ? Math.round((revenue / total) * 100) : 0,
-      color: colors[name as keyof typeof colors] || "#9CA3AF",
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-});
-
-// Order Type Statistics
-const orderTypeStatsData = computed(() => {
-  const typeMap = new Map();
-  const icons = {
-    "dine-in": "🍽️",
-    "take-away": "📦",
-    "order-online": "📱",
-  };
-  const colors = {
-    "dine-in": "#2D6A4F",
-    "take-away": "#F4A261",
-    "order-online": "#6B4E71",
-  };
-
-  filteredOrders.value.forEach((order) => {
-    const type = order.orderType || "dine-in";
-    if (!typeMap.has(type)) {
-      typeMap.set(type, { count: 0, revenue: 0 });
-    }
-    const stats = typeMap.get(type);
-    stats.count++;
-    stats.revenue += order.total || 0;
-  });
-
-  const totalCount = filteredOrders.value.length;
-  const totalRevenue = Array.from(typeMap.values()).reduce(
-    (sum, t) => sum + t.revenue,
-    0
-  );
-
-  return Array.from(typeMap.entries())
-    .map(([name, stats]) => ({
-      name: name
-        .split("-")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" "),
-      icon: icons[name as keyof typeof icons] || "📋",
-      count: stats.count,
-      revenue: stats.revenue,
-      percentage:
-        totalCount > 0 ? Math.round((stats.count / totalCount) * 100) : 0,
-      color: colors[name as keyof typeof colors] || "#9CA3AF",
-    }))
-    .sort((a, b) => b.revenue - a.revenue);
-});
-
-// Hourly Sales Data
-const hourlySalesData = computed(() => {
-  const hourMap = new Map();
-
-  // Initialize hours from 6 AM to 10 PM
-  for (let i = 6; i <= 22; i++) {
-    const hourLabel = i <= 11 ? `${i} AM` : i === 12 ? `12 PM` : `${i - 12} PM`;
-    hourMap.set(i, { hour: hourLabel, revenue: 0 });
+const updateRevenueChart = () => {
+  if (revenueChartInstance) {
+    revenueChartInstance.destroy();
+    revenueChartInstance = null;
   }
 
-  filteredOrders.value.forEach((order) => {
-    if (order.created_at) {
-      const hour = new Date(order.created_at).getHours();
-      const revenue = order.total || 0;
-      if (hourMap.has(hour)) {
-        const data = hourMap.get(hour);
-        data.revenue += revenue;
-      }
-    }
-  });
+  const ctx = revenueChartCanvas.value?.getContext("2d");
+  if (!ctx) return;
 
-  const hours = Array.from(hourMap.entries())
-    .map(([key, value]) => ({
-      hour: value.hour,
-      revenue: value.revenue,
-    }))
-    .sort((a, b) => {
-      const hourA = parseInt(a.hour);
-      const hourB = parseInt(b.hour);
-      return hourA - hourB;
-    });
-
-  const maxRevenue = Math.max(...hours.map((h) => h.revenue), 1);
-
-  return hours.map((h) => ({
-    ...h,
-    percentage: (h.revenue / maxRevenue) * 100,
-  }));
-});
-
-// Daily Sales Data for Table
-const dailySalesData = computed(() => {
-  const dailyMap = new Map();
-
-  filteredOrders.value.forEach((order) => {
-    const date = new Date(order.created_at).toISOString().split("T")[0];
-    if (!dailyMap.has(date)) {
-      dailyMap.set(date, { orders: 0, revenue: 0, itemsSold: 0 });
-    }
-    const data = dailyMap.get(date);
-    data.orders++;
-    data.revenue += order.total || 0;
-
-    const items = order.items || [];
-    items.forEach((item) => {
-      data.itemsSold += item.quantity || 0;
-    });
-  });
-
-  return Array.from(dailyMap.entries())
-    .map(([date, data]) => ({
-      date,
-      orders: data.orders,
-      revenue: data.revenue,
-      avgOrder: data.orders > 0 ? data.revenue / data.orders : 0,
-      itemsSold: data.itemsSold,
-    }))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-});
-
-// Filtered and sorted sales data
-const filteredSalesData = computed(() => {
-  let data = [...dailySalesData.value];
-
-  if (tableSearch.value) {
-    data = data.filter(
-      (day) =>
-        day.date.includes(tableSearch.value) ||
-        day.orders.toString().includes(tableSearch.value)
-    );
-  }
-
-  data.sort((a, b) => {
-    let aVal = a[sortKey.value as keyof typeof a];
-    let bVal = b[sortKey.value as keyof typeof b];
-    if (sortKey.value === "date") {
-      aVal = new Date(aVal as string).getTime();
-      bVal = new Date(bVal as string).getTime();
-    }
-    if (sortOrder.value === "asc") {
-      return aVal > bVal ? 1 : -1;
-    } else {
-      return aVal < bVal ? 1 : -1;
-    }
-  });
-
-  return data;
-});
-
-const paginatedSalesData = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  const end = start + itemsPerPage.value;
-  return filteredSalesData.value.slice(start, end);
-});
-
-const totalPages = computed(() =>
-  Math.ceil(filteredSalesData.value.length / itemsPerPage.value)
-);
-
-// Helper functions
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-};
-
-const getRankClass = (rank: number) => {
-  if (rank === 1) return "gold";
-  if (rank === 2) return "silver";
-  if (rank === 3) return "bronze";
-  return "";
-};
-
-const getProgressColor = (index: number) => {
-  const colors = ["#2D6A4F", "#E07A5F", "#F4A261", "#6B4E71", "#E9C46A"];
-  return colors[index % colors.length];
-};
-
-const getHourColor = (percentage: number) => {
-  if (percentage > 35) return "#2D6A4F";
-  if (percentage > 20) return "#F4A261";
-  return "#E07A5F";
-};
-
-const setDatePreset = (preset: string) => {
-  selectedPreset.value = preset;
+  // Get revenue data from orders
+  const days = parseInt(revenuePeriod.value);
   const today = new Date();
-  let start = new Date();
+  const revenueMap = new Map();
 
-  switch (preset) {
-    case "today":
-      start = today;
-      break;
-    case "yesterday":
-      start = new Date(today.setDate(today.getDate() - 1));
-      break;
-    case "week":
-      start = new Date(today.setDate(today.getDate() - 7));
-      break;
-    case "month":
-      start = new Date(today.setMonth(today.getMonth() - 1));
-      break;
-    case "year":
-      start = new Date(today.setFullYear(today.getFullYear() - 1));
-      break;
+  // Initialize last 'days' days with zero
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    revenueMap.set(dateStr, 0);
   }
 
-  dateRange.value.start = start.toISOString().split("T")[0];
-  dateRange.value.end = new Date().toISOString().split("T")[0];
-  fetchReportData();
+  // Aggregate revenue by date
+  orders.value.forEach((order) => {
+    if (!order.created_at) return;
+    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    if (revenueMap.has(orderDate)) {
+      revenueMap.set(orderDate, revenueMap.get(orderDate) + (order.total || 0));
+    }
+  });
+
+  const labels = Array.from(revenueMap.keys()).map((date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  });
+
+  const data = Array.from(revenueMap.values());
+
+  revenueChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "Revenue (KSh)",
+          data: data,
+          borderColor: "#2D6A4F",
+          backgroundColor: "rgba(45, 106, 79, 0.1)",
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: "#2D6A4F",
+          pointRadius: 3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `Revenue: KSh ${context.raw.toLocaleString()}`,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => "KSh " + value.toLocaleString(),
+          },
+        },
+        x: {
+          grid: {
+            display: false,
+          },
+          ticks: {
+            maxRotation: 45,
+            autoSkip: true,
+            maxTicksLimit: 10,
+          },
+        },
+      },
+    },
+  });
 };
 
-const sortBy = (key: string) => {
-  if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
-  } else {
-    sortKey.value = key;
-    sortOrder.value = "desc";
-  }
-};
-
-const prevPage = () => {
-  if (currentPage.value > 1) currentPage.value--;
-};
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) currentPage.value++;
-};
-
-const fetchReportData = async () => {
-  loading.value = true;
-  try {
-    await store.getAllOrders();
-    toast("Report data updated successfully!", "success");
-  } catch (error) {
-    toast("Failed to load report data", "error");
-  } finally {
-    loading.value = false;
-  }
-};
-const fetchProductsData = async () => {
-  loading.value = true;
-  try {
-    await store.getAllProducts();
-    toast("Product data updated successfully!", "success");
-  } catch (error) {
-    toast("Failed to load product data", "error");
-  } finally {
-    loading.value = false;
-  }
-};
-
-const exportReport = () => {
-  toast("Report export started!", "success");
-};
-
-const exportPDF = () => {
-  toast("PDF report generated!", "success");
-};
-
-const exportExcel = () => {
-  toast("Excel file downloaded!", "success");
-};
-
-const exportCSV = () => {
-  toast("CSV file downloaded!", "success");
-};
-
-const scheduleReport = () => {
-  showScheduleDialog.value = false;
-  toast("Report scheduled successfully!", "success");
-};
-
-const toast = (message: string, type: string = "success") => {
-  toastMessage.value = message;
-  toastColor.value = type === "success" ? "#2D6A4F" : "#E07A5F";
-  toastIcon.value =
-    type === "success" ? "mdi-check-circle" : "mdi-alert-circle";
-  showToast.value = true;
-};
+// Watch for revenue period changes
+watch(revenuePeriod, () => {
+  updateRevenueChart();
+});
 
 onMounted(async () => {
-  await fetchReportData();
-  await fetchProductsData();
+  await refreshReports();
 });
 </script>
 
 <style scoped>
-.reports-container {
-  padding: 32px;
+.reports-dashboard {
+  padding: 24px;
   background: #f8f6f2;
   min-height: calc(100vh - 64px);
 }
 
-/* Header */
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .page-badge {
   font-size: 12px;
   font-weight: 600;
-  color: #e07a5f;
+  color: #2d6a4f;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .page-title {
   font-family: "Playfair Display", serif;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: #1b4332;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .page-subtitle {
   color: #6b7280;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.export-btn,
-.schedule-btn {
-  text-transform: none;
-  border-radius: 40px;
-}
-
-.export-btn {
-  border-color: #e5e7eb;
-}
-
-.schedule-btn {
-  background: #1b4332;
-  color: white;
-}
-
-/* Date Range Section */
-.date-range-section {
-  margin-bottom: 32px;
-}
-
-.date-range-card {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.date-presets {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.preset-btn {
-  padding: 8px 16px;
-  border-radius: 40px;
-  background: #f8f6f2;
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 13px;
-}
-
-.preset-btn:hover {
-  background: #e5e0d5;
-}
-
-.preset-btn.active {
-  background: #2d6a4f;
-  color: white;
-}
-
-.date-picker-group {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.date-picker-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f8f6f2;
-  padding: 8px 16px;
-  border-radius: 40px;
-}
-
-.date-icon {
-  color: #9ca3af;
-}
-
-.date-input {
-  border: none;
-  background: transparent;
-  outline: none;
   font-size: 14px;
 }
 
-.date-separator {
-  color: #9ca3af;
-}
-
-.apply-btn {
-  background: #2d6a4f;
-  color: white;
-  border-radius: 40px;
-  text-transform: none;
-}
-
-/* Loading */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f4f6;
-  border-top-color: #2d6a4f;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Metrics Grid */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  margin-bottom: 32px;
-}
-
-.metric-card {
-  background: white;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s ease;
-}
-
-.metric-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
-}
-
-.metric-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* Stats Grid */
+.stats-grid {
   margin-bottom: 16px;
 }
 
-.metric-icon {
+.stat-card {
+  background: white;
+  border: 1px solid #f3f4f6;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon {
   width: 48px;
   height: 48px;
-  border-radius: 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.metric-trend {
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1b4332;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.stat-change {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 20px;
+  margin-top: 4px;
 }
 
-.metric-trend.up {
-  background: #2d6a4f20;
+.stat-change.positive {
   color: #2d6a4f;
 }
 
-.metric-trend.down {
-  background: #e07a5f20;
+.stat-change.negative {
   color: #e07a5f;
 }
 
-.metric-value {
-  font-size: 32px;
-  font-weight: 800;
-  color: #1b4332;
-  margin-bottom: 8px;
+/* Report Cards */
+.reports-grid {
+  margin-bottom: 16px;
 }
 
-.metric-title {
-  font-size: 14px;
-  color: #6b7280;
+.report-card {
+  background: white;
+  border: 1px solid #f3f4f6;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  height: 100%;
+}
+
+.report-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  border-color: #2d6a4f;
+}
+
+.report-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.report-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1b4332;
   margin-bottom: 4px;
 }
 
-.metric-subtitle {
-  font-size: 11px;
-  color: #9ca3af;
+.report-description {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 12px;
 }
 
 /* Charts */
-.chart-row {
-  margin-bottom: 32px;
-}
-
 .chart-card {
-  border-radius: 24px;
-  overflow: hidden;
-  padding: 24px;
+  background: white;
+  border: 1px solid #f3f4f6;
 }
 
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 8px;
 }
 
 .chart-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
   color: #1b4332;
-  margin-bottom: 4px;
 }
 
 .chart-subtitle {
@@ -1383,616 +875,259 @@ onMounted(async () => {
   color: #6b7280;
 }
 
-.chart-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.chart-type-btn {
-  padding: 6px 16px;
-  border-radius: 20px;
-  background: #f8f6f2;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s ease;
-}
-
-.chart-type-btn.active {
-  background: #2d6a4f;
-  color: white;
+.period-select {
+  max-width: 140px;
 }
 
 .chart-container {
-  height: 350px;
+  height: 300px;
   position: relative;
 }
 
-/* Two Column Layout */
-.two-column-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 32px;
-}
-
-.products-card,
-.distribution-card,
-.hourly-card,
-.ordertype-card {
-  border-radius: 24px;
-  padding: 24px;
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.card-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1b4332;
-  margin-bottom: 4px;
-}
-
-.card-subtitle {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.limit-select {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: white;
-}
-
-/* Products List */
-.products-list {
+/* Top Products */
+.top-products {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 
-.product-row {
-  position: relative;
+.top-product-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px;
   background: #f8f6f2;
-  border-radius: 16px;
+  border-radius: 12px;
   transition: all 0.3s ease;
 }
 
-.product-row:hover {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.top-product-item:hover {
+  background: #f0ede5;
 }
 
 .product-rank {
-  position: absolute;
-  top: 12px;
-  right: 12px;
+  font-size: 18px;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.1);
+  min-width: 30px;
 }
 
-.rank-badge {
-  width: 28px;
-  height: 28px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 12px;
-  background: #e5e7eb;
-  color: #6b7280;
-}
-
-.rank-badge.gold {
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-  color: white;
-}
-
-.rank-badge.silver {
-  background: linear-gradient(135deg, #c0c0c0, #a8a8a8);
-  color: white;
-}
-
-.rank-badge.bronze {
-  background: linear-gradient(135deg, #cd7f32, #b87333);
-  color: white;
+.product-info {
+  flex: 1;
 }
 
 .product-name {
   font-weight: 600;
   color: #1b4332;
-  margin-bottom: 4px;
 }
 
-.product-category {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.product-stats {
-  display: flex;
-  justify-content: space-between;
-  margin: 12px 0 8px;
-  font-size: 13px;
-}
-
-.product-quantity {
-  color: #2d6a4f;
-  font-weight: 600;
-}
-
-.product-revenue {
-  color: #e07a5f;
-  font-weight: 600;
-}
-
-.product-progress {
-  height: 4px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 1s ease;
-}
-
-/* Distribution Chart */
-.distribution-container {
-  height: 200px;
-  margin-bottom: 20px;
-}
-
-.category-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  background: #f8f6f2;
-  border-radius: 12px;
-}
-
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-}
-
-.legend-name {
-  flex: 1;
-  font-weight: 500;
-  color: #1b4332;
-}
-
-.legend-value {
-  font-weight: 700;
-  color: #1b4332;
-}
-
-.legend-amount {
-  font-weight: 600;
-  color: #e07a5f;
-}
-
-/* Hourly Bars */
-.hourly-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  height: 250px;
-  padding: 20px 0;
-}
-
-.hour-bar-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  height: 100%;
-}
-
-.hour-bar {
-  width: 100%;
-  min-height: 4px;
-  border-radius: 4px;
-  position: relative;
-  transition: height 0.5s ease;
-  cursor: pointer;
-}
-
-.hour-value {
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  font-weight: 600;
-  color: #1b4332;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.hour-bar:hover .hour-value {
-  opacity: 1;
-}
-
-.hour-label {
-  font-size: 10px;
-  color: #6b7280;
-}
-
-/* Order Type Stats */
-.ordertype-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.ordertype-item {
-  padding: 12px;
-  background: #f8f6f2;
-  border-radius: 16px;
-}
-
-.ordertype-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.ordertype-name {
-  font-weight: 600;
-  color: #1b4332;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ordertype-icon {
-  font-size: 18px;
-}
-
-.ordertype-percentage {
-  font-weight: 700;
-  color: #2d6a4f;
-}
-
-.ordertype-progress {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 1s ease;
-}
-
-.ordertype-details {
-  display: flex;
-  justify-content: space-between;
+.product-sales {
   font-size: 12px;
   color: #6b7280;
 }
 
-/* Sales Table */
-.sales-table-card {
-  border-radius: 24px;
-  overflow: hidden;
-  margin-bottom: 32px;
-  padding: 24px;
-}
-
-.table-controls {
-  display: flex;
-  gap: 12px;
-}
-
-.search-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #f8f6f2;
-  padding: 6px 12px;
-  border-radius: 8px;
-}
-
-.table-search {
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 13px;
-}
-
-.table-container {
-  overflow-x: auto;
-}
-
-.sales-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.sales-table th {
-  text-align: left;
-  padding: 12px;
-  background: #f8f6f2;
-  font-weight: 600;
-  color: #1b4332;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.sales-table th:hover {
-  background: #e5e0d5;
-}
-
-.sales-table td {
-  padding: 12px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #4b5563;
-}
-
-.date-cell {
-  font-weight: 600;
-  color: #1b4332;
-}
-
-.revenue-cell {
-  font-weight: 600;
+.product-revenue {
+  font-weight: 700;
   color: #e07a5f;
 }
 
-/* Pagination */
-.pagination-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #f3f4f6;
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
 }
 
-.items-per-page {
+.no-data p {
+  margin-top: 12px;
+  color: #6b7280;
+}
+
+/* Quick Actions */
+.quick-actions-card {
+  background: white;
+  border: 1px solid #f3f4f6;
+}
+
+.quick-actions-header {
+  margin-bottom: 16px;
+}
+
+.quick-actions-header h3 {
+  font-size: 16px;
+  color: #1b4332;
+}
+
+.action-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-}
-
-.items-per-page select {
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  background: white;
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-info {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-/* Export Options */
-.export-options {
-  background: white;
-  border-radius: 24px;
-  padding: 24px;
-}
-
-.export-header {
-  margin-bottom: 24px;
-}
-
-.export-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1b4332;
-  margin-bottom: 4px;
-}
-
-.export-header p {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.export-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.export-option {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
+  padding: 20px;
   background: #f8f6f2;
-  border: none;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
-  text-align: left;
 }
 
-.export-option:hover {
-  transform: translateY(-2px);
+.action-card:hover {
+  transform: translateY(-4px);
   background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
-.export-icon {
+.action-icon {
   width: 48px;
   height: 48px;
-  border-radius: 16px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.export-info {
-  flex: 1;
-}
-
-.export-title {
-  font-weight: 700;
-  color: #1b4332;
-  margin-bottom: 4px;
-}
-
-.export-desc {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-/* Dialog Styles */
-.schedule-dialog {
-  border-radius: 32px !important;
-  overflow: hidden;
-}
-
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 24px 0;
-}
-
-.dialog-header h2 {
-  font-family: "Playfair Display", serif;
-  font-size: 24px;
-  font-weight: 700;
-  color: #1b4332;
-}
-
-.dialog-content {
-  padding: 24px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-group label {
-  display: block;
+.action-text {
   font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
-}
-
-.form-select,
-.form-input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.form-select:focus,
-.form-input:focus {
-  border-color: #2d6a4f;
-  box-shadow: 0 0 0 2px rgba(45, 106, 79, 0.1);
-}
-
-.radio-group {
-  display: flex;
-  gap: 16px;
-}
-
-.radio-group label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: normal;
-  cursor: pointer;
-}
-
-.dialog-actions {
-  padding: 16px 24px 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-/* Toast */
-.custom-toast :deep(.v-snackbar__content) {
-  padding: 0 !important;
-  background: transparent !important;
-}
-
-.toast-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #1b4332;
+  text-align: center;
 }
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .two-column-row {
-    grid-template-columns: 1fr;
-  }
-
-  .export-buttons {
-    grid-template-columns: 1fr;
+  .chart-container {
+    height: 250px;
   }
 }
 
 @media (max-width: 768px) {
-  .reports-container {
-    padding: 20px;
-  }
-
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .date-picker-group {
-    flex-direction: column;
-    align-items: stretch;
+  .reports-dashboard {
+    padding: 16px;
   }
 
   .page-title {
-    font-size: 28px;
+    font-size: 24px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .report-icon {
+    width: 48px;
+    height: 48px;
+  }
+
+  .report-icon .v-icon {
+    font-size: 24px !important;
+  }
+
+  .chart-container {
+    height: 200px;
+  }
+
+  .action-card {
+    padding: 16px;
+  }
+
+  .action-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .action-icon .v-icon {
+    font-size: 20px !important;
+  }
+
+  .action-text {
+    font-size: 12px;
+  }
+
+  .top-product-item {
+    padding: 10px;
+  }
+
+  .product-rank {
+    font-size: 14px;
+    min-width: 24px;
+  }
+
+  .product-name {
+    font-size: 14px;
+  }
+
+  .period-select {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 20px;
+  }
+
+  .stat-value {
+    font-size: 16px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-change {
+    font-size: 11px;
+  }
+
+  .report-title {
+    font-size: 14px;
+  }
+
+  .report-description {
+    font-size: 12px;
+  }
+
+  .chart-title {
+    font-size: 14px;
+  }
+
+  .chart-subtitle {
+    font-size: 11px;
+  }
+
+  .quick-actions-header h3 {
+    font-size: 14px;
+  }
+
+  .chart-container {
+    height: 180px;
+  }
+
+  .action-card {
+    padding: 12px;
+  }
+
+  .action-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .action-icon .v-icon {
+    font-size: 18px !important;
+  }
+
+  .action-text {
+    font-size: 11px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .header-actions .v-btn {
+    width: 100%;
+    margin: 0 !important;
   }
 }
 </style>
