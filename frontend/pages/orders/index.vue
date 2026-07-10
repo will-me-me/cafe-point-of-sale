@@ -1,13 +1,14 @@
+<!-- pages/orders/index.vue -->
 <template>
   <div class="orders-container">
-    <!-- Header -->
-    <div class="page-header">
-      <div>
+    <!-- Page Header -->
+    <v-row class="page-header" no-gutters>
+      <v-col cols="12" md="8">
         <div class="page-badge">Transaction History</div>
         <h1 class="page-title">Orders</h1>
         <p class="page-subtitle">View and manage all customer orders</p>
-      </div>
-      <div class="header-actions">
+      </v-col>
+      <v-col cols="12" md="4" class="text-md-right mt-4 mt-md-0">
         <v-btn variant="outlined" class="export-btn" @click="exportOrders">
           <v-icon start>mdi-export</v-icon>
           Export
@@ -15,342 +16,629 @@
         <v-btn
           v-if="hasDebtOrders"
           color="#E07A5F"
-          class="debt-btn"
+          class="debt-btn ml-2"
           @click="showDebtManagement = true"
         >
           <v-icon start>mdi-account-cash</v-icon>
           Manage Debts ({{ debtCount }})
         </v-btn>
-      </div>
-    </div>
-    <div v-if="hasDebtOrders" class="debt-overview-section">
-      <div class="debt-overview-header">
-        <div class="header-left">
-          <v-icon color="#E07A5F" size="24">mdi-account-cash</v-icon>
-          <span class="debt-title">Debt Overview</span>
-          <v-chip size="small" color="#E07A5F" text-color="white">
-            {{ debtCount }} Pending
-          </v-chip>
-        </div>
-        <div class="header-right">
-          <span class="total-debt-label">Total Outstanding</span>
-          <span class="total-debt-amount">ksh{{ totalDebt }}</span>
-        </div>
-      </div>
+      </v-col>
+    </v-row>
 
-      <div class="debt-stats-grid">
-        <div class="debt-stat-card">
-          <div class="stat-icon" style="background: #e07a5f20">
-            <v-icon color="#E07A5F" size="20">mdi-account-group</v-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">
-              {{ debtOverview.total_customers || 0 }}
-            </div>
-            <div class="stat-label">Customers with Debt</div>
-          </div>
-        </div>
-        <div class="debt-stat-card">
-          <div class="stat-icon" style="background: #2d6a4f20">
-            <v-icon color="#2D6A4F" size="20">mdi-clock-outline</v-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">
-              {{ debtOverview.average_age || 0 }} days
-            </div>
-            <div class="stat-label">Average Age</div>
-          </div>
-        </div>
-        <div class="debt-stat-card">
-          <div class="stat-icon" style="background: #f4a26120">
-            <v-icon color="#F4A261" size="20">mdi-chart-pie</v-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ debtCount }}</div>
-            <div class="stat-label">Total Debt Orders</div>
-          </div>
-        </div>
-      </div>
+    <!-- Debt Overview Section -->
+    <v-row v-if="hasDebtOrders" no-gutters>
+      <v-col cols="12">
+        <v-card class="debt-overview-card mb-4" elevation="0" rounded="xl">
+          <v-card-text class="pa-4">
+            <v-row align="center" no-gutters>
+              <v-col cols="12" md="6">
+                <div class="debt-overview-header">
+                  <v-icon color="#E07A5F" size="24">mdi-account-cash</v-icon>
+                  <span class="debt-title">Debt Overview</span>
+                  <v-chip size="small" color="#E07A5F" text-color="white">
+                    {{ debtCount }} Pending
+                  </v-chip>
+                </div>
+              </v-col>
+              <v-col cols="12" md="6" class="text-md-right mt-2 mt-md-0">
+                <span class="total-debt-label">Total Outstanding</span>
+                <span class="total-debt-amount">KSh {{ totalDebt }}</span>
+              </v-col>
+            </v-row>
 
-      <!-- Debt Aging Breakdown -->
-      <div class="debt-aging-section">
-        <div class="aging-header">
-          <span class="aging-title">Aging Breakdown</span>
-        </div>
-        <div class="aging-bars">
-          <div class="aging-item">
-            <span class="aging-label">0-7 Days</span>
-            <div class="aging-bar">
-              <div
-                class="aging-fill"
-                :style="{
-                  width: getAgingPercentage('0-7_days') + '%',
-                  background: getAgingColor('0-7_days'),
-                }"
-              ></div>
-            </div>
-            <span class="aging-amount"
-              >ksh{{ debtOverview.by_age?.["0-7_days"]?.toFixed(2) || 0 }}</span
-            >
-          </div>
-          <div class="aging-item">
-            <span class="aging-label">8-14 Days</span>
-            <div class="aging-bar">
-              <div
-                class="aging-fill"
-                :style="{
-                  width: getAgingPercentage('8-14_days') + '%',
-                  background: getAgingColor('8-14_days'),
-                }"
-              ></div>
-            </div>
-            <span class="aging-amount"
-              >ksh{{
-                debtOverview.by_age?.["8-14_days"]?.toFixed(2) || 0
-              }}</span
-            >
-          </div>
-          <div class="aging-item">
-            <span class="aging-label">15-30 Days</span>
-            <div class="aging-bar">
-              <div
-                class="aging-fill"
-                :style="{
-                  width: getAgingPercentage('15-30_days') + '%',
-                  background: getAgingColor('15-30_days'),
-                }"
-              ></div>
-            </div>
-            <span class="aging-amount"
-              >ksh{{
-                debtOverview.by_age?.["15-30_days"]?.toFixed(2) || 0
-              }}</span
-            >
-          </div>
-          <div class="aging-item">
-            <span class="aging-label">30+ Days</span>
-            <div class="aging-bar">
-              <div
-                class="aging-fill"
-                :style="{
-                  width: getAgingPercentage('30+_days') + '%',
-                  background: getAgingColor('30+_days'),
-                }"
-              ></div>
-            </div>
-            <span class="aging-amount"
-              >ksh{{ debtOverview.by_age?.["30+_days"]?.toFixed(2) || 0 }}</span
-            >
-          </div>
-        </div>
-      </div>
-    </div>
+            <v-row class="debt-stats-grid mt-2" no-gutters>
+              <v-col cols="12" sm="4" class="pa-1">
+                <v-card class="debt-stat-card" elevation="0" rounded="lg">
+                  <v-card-text class="pa-3">
+                    <v-row align="center" no-gutters>
+                      <v-col cols="auto">
+                        <div class="stat-icon" style="background: #e07a5f20">
+                          <v-icon color="#E07A5F" size="20"
+                            >mdi-account-group</v-icon
+                          >
+                        </div>
+                      </v-col>
+                      <v-col class="pl-3">
+                        <div class="stat-value">
+                          {{ debtOverview.total_customers || 0 }}
+                        </div>
+                        <div class="stat-label">Customers with Debt</div>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              <v-col cols="12" sm="4" class="pa-1">
+                <v-card class="debt-stat-card" elevation="0" rounded="lg">
+                  <v-card-text class="pa-3">
+                    <v-row align="center" no-gutters>
+                      <v-col cols="auto">
+                        <div class="stat-icon" style="background: #2d6a4f20">
+                          <v-icon color="#2D6A4F" size="20"
+                            >mdi-clock-outline</v-icon
+                          >
+                        </div>
+                      </v-col>
+                      <v-col class="pl-3">
+                        <div class="stat-value">
+                          {{ debtOverview.average_age || 0 }} days
+                        </div>
+                        <div class="stat-label">Average Age</div>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+              <v-col cols="12" sm="4" class="pa-1">
+                <v-card class="debt-stat-card" elevation="0" rounded="lg">
+                  <v-card-text class="pa-3">
+                    <v-row align="center" no-gutters>
+                      <v-col cols="auto">
+                        <div class="stat-icon" style="background: #f4a26120">
+                          <v-icon color="#F4A261" size="20"
+                            >mdi-chart-pie</v-icon
+                          >
+                        </div>
+                      </v-col>
+                      <v-col class="pl-3">
+                        <div class="stat-value">{{ debtCount }}</div>
+                        <div class="stat-label">Total Debt Orders</div>
+                      </v-col>
+                    </v-row>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
 
-    <!-- Filters -->
-    <div class="filters-section">
-      <div class="search-wrapper">
-        <v-icon class="search-icon">mdi-magnify</v-icon>
-        <input
-          v-model="searchQuery"
-          placeholder="Search by receipt number or customer..."
-          class="search-input"
-        />
-      </div>
-      <div class="filter-group">
-        <select v-model="selectedType" class="filter-select">
-          <option value="">All Types</option>
-          <option value="dine-in">🍽️ Dine In</option>
-          <option value="take-away">📦 Take Away</option>
-          <option value="order-online">📱 Online</option>
-        </select>
-        <select v-model="selectedPaymentMode" class="filter-select">
-          <option value="">All Payment Methods</option>
-          <option value="cash">💵 Cash</option>
-          <option value="mpesa">📱 M-Pesa</option>
-          <option value="debt">📋 Debt</option>
-        </select>
-        <select v-model="selectedStatus" class="filter-select">
-          <option value="">All Status</option>
-          <option value="completed">✅ Completed</option>
-          <option value="preparing">🔄 Preparing</option>
-          <option value="pending">⏳ Pending</option>
-          <option value="cancelled">❌ Cancelled</option>
-        </select>
-        <input type="date" v-model="dateFilter" class="date-picker" />
-      </div>
-    </div>
+            <!-- Debt Aging Breakdown -->
+            <v-card class="debt-aging-card mt-3" elevation="0" rounded="lg">
+              <v-card-text class="pa-3">
+                <div class="aging-header mb-2">
+                  <span class="aging-title">Aging Breakdown</span>
+                </div>
+                <div class="aging-bars">
+                  <div
+                    v-for="(item, key) in agingData"
+                    :key="key"
+                    class="aging-item"
+                  >
+                    <span class="aging-label">{{ item.label }}</span>
+                    <div class="aging-bar">
+                      <div
+                        class="aging-fill"
+                        :style="{
+                          width: getAgingPercentage(key) + '%',
+                          background: item.color,
+                        }"
+                      ></div>
+                    </div>
+                    <span class="aging-amount"
+                      >KSh {{ getAgingAmount(key) }}</span
+                    >
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Filters Section -->
+    <v-card class="filters-card mb-4" elevation="0" rounded="xl">
+      <v-card-text class="pa-4">
+        <v-row no-gutters>
+          <v-col cols="12" md="5" class="pr-md-4">
+            <div class="search-wrapper">
+              <v-icon class="search-icon">mdi-magnify</v-icon>
+              <input
+                v-model="searchQuery"
+                placeholder="Search by receipt number or customer..."
+                class="search-input"
+              />
+            </div>
+          </v-col>
+          <v-col cols="12" md="7">
+            <v-row no-gutters class="filter-group">
+              <v-col cols="6" sm="3" class="pr-1">
+                <select v-model="selectedType" class="filter-select">
+                  <option value="">All Types</option>
+                  <option value="dine-in">🍽️ Dine In</option>
+                  <option value="takeaway">📦 Take Away</option>
+                  <option value="delivery">🚚 Delivery</option>
+                </select>
+              </v-col>
+              <v-col cols="6" sm="3" class="px-1">
+                <select v-model="selectedPaymentMode" class="filter-select">
+                  <option value="">All Payment</option>
+                  <option value="cash">💵 Cash</option>
+                  <option value="mpesa">📱 M-Pesa</option>
+                  <option value="debt">📋 Debt</option>
+                </select>
+              </v-col>
+              <v-col cols="6" sm="3" class="px-1">
+                <select v-model="selectedStatus" class="filter-select">
+                  <option value="">All Status</option>
+                  <option value="paid">✅ Paid</option>
+                  <option value="pending">⏳ Pending</option>
+                  <option value="overdue">⚠️ Overdue</option>
+                </select>
+              </v-col>
+              <v-col cols="6" sm="3" class="pl-1">
+                <input type="date" v-model="dateFilter" class="date-picker" />
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
     <!-- Stats Summary -->
-    <div class="stats-summary">
-      <div class="summary-card">
-        <div class="summary-icon" style="background: #2d6a4f20">
-          <v-icon color="#2D6A4F">mdi-cart-outline</v-icon>
-        </div>
-        <div class="summary-info">
-          <div class="summary-value">{{ filteredOrders.length }}</div>
-          <div class="summary-label">Total Orders</div>
-        </div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-icon" style="background: #e07a5f20">
-          <v-icon color="#E07A5F">mdi-currency-usd</v-icon>
-        </div>
-        <div class="summary-info">
-          <div class="summary-value">ksh{{ totalRevenue }}</div>
-          <div class="summary-label">Total Revenue</div>
-        </div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-icon" style="background: #f4a26120">
-          <v-icon color="#F4A261">mdi-chart-line</v-icon>
-        </div>
-        <div class="summary-info">
-          <div class="summary-value">ksh{{ avgOrderValue }}</div>
-          <div class="summary-label">Average Order</div>
-        </div>
-      </div>
-      <div class="summary-card" style="background: #fff3e0">
-        <div class="summary-icon" style="background: #e07a5f30">
-          <v-icon color="#E07A5F">mdi-account-cash</v-icon>
-        </div>
-        <div class="summary-info">
-          <div class="summary-value">ksh{{ totalDebt }}</div>
-          <div class="summary-label">Total Outstanding Debt</div>
-          <div class="summary-sub">{{ debtCount }} debt orders</div>
-        </div>
-      </div>
-    </div>
+    <v-row class="stats-summary" no-gutters>
+      <v-col cols="12" sm="6" lg="3" class="pa-1">
+        <v-card class="summary-card" elevation="0" rounded="lg">
+          <v-card-text class="pa-3">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div class="summary-icon" style="background: #2d6a4f20">
+                  <v-icon color="#2D6A4F">mdi-cart-outline</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="summary-value">{{ filteredOrders.length }}</div>
+                <div class="summary-label">Total Orders</div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" sm="6" lg="3" class="pa-1">
+        <v-card class="summary-card" elevation="0" rounded="lg">
+          <v-card-text class="pa-3">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div class="summary-icon" style="background: #e07a5f20">
+                  <v-icon color="#E07A5F">mdi-currency-usd</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="summary-value">KSh {{ totalRevenue }}</div>
+                <div class="summary-label">Total Revenue</div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" sm="6" lg="3" class="pa-1">
+        <v-card class="summary-card" elevation="0" rounded="lg">
+          <v-card-text class="pa-3">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div class="summary-icon" style="background: #f4a26120">
+                  <v-icon color="#F4A261">mdi-chart-line</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="summary-value">KSh {{ avgOrderValue }}</div>
+                <div class="summary-label">Average Order</div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+      <v-col cols="12" sm="6" lg="3" class="pa-1">
+        <v-card class="summary-card debt-summary" elevation="0" rounded="lg">
+          <v-card-text class="pa-3">
+            <v-row align="center" no-gutters>
+              <v-col cols="auto">
+                <div class="summary-icon" style="background: #e07a5f30">
+                  <v-icon color="#E07A5F">mdi-account-cash</v-icon>
+                </div>
+              </v-col>
+              <v-col class="pl-3">
+                <div class="summary-value">KSh {{ totalDebt }}</div>
+                <div class="summary-label">Total Outstanding Debt</div>
+                <div class="summary-sub">{{ debtCount }} debt orders</div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
 
     <!-- Orders Table -->
-    <v-card class="orders-table-card" elevation="0">
-      <div class="table-container">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>Receipt #</th>
-              <th>Customer</th>
-              <th>Order Type</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Date</th>
-              <th>Payment</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="order in paginatedOrders"
-              :key="order.id"
-              :class="{
-                'debt-row':
-                  order.paymentMode === 'debt' &&
-                  order.paymentStatus === 'pending',
-              }"
-            >
-              <td class="receipt-cell">{{ order.receiptNumber }}</td>
-              <td>{{ order.customerName }}</td>
-              <td>
-                <span class="order-type-badge" :class="order.orderType">
-                  {{ order.orderType }}
-                </span>
-              </td>
-              <td>{{ order.items.length }} items</td>
-              <td class="amount-cell">ksh{{ order.total }}</td>
-              <td>{{ formatDate(order.created_at) }}</td>
-              <td>
-                <span class="payment-badge" :class="order.paymentMode">
-                  <v-icon size="12" class="mr-1">
-                    {{ getPaymentIcon(order.paymentMode) }}
-                  </v-icon>
-                  {{ order.paymentMode }}
-                </span>
-              </td>
-              <td>
-                <span
-                  class="status-badge"
-                  :class="order.paymentStatus || 'completed'"
-                >
-                  {{ order.paymentStatus || "completed" }}
-                </span>
-              </td>
-              <td>
-                <div class="action-buttons">
-                  <v-btn
-                    icon
-                    size="small"
-                    variant="text"
-                    @click="viewOrderDetails(order)"
-                  >
-                    <v-icon size="18">mdi-eye</v-icon>
-                  </v-btn>
-                  <v-btn
-                    icon
-                    size="small"
-                    variant="text"
-                    @click="printReceipt(order)"
-                  >
-                    <v-icon size="18">mdi-printer</v-icon>
-                  </v-btn>
-                  <v-btn
-                    v-if="
-                      order.paymentMode === 'debt' &&
-                      order.paymentStatus === 'pending'
-                    "
-                    icon
-                    size="small"
-                    variant="text"
-                    color="#2D6A4F"
-                    @click="markDebtAsPaid(order)"
-                  >
-                    <v-icon size="18">mdi-check-circle</v-icon>
-                  </v-btn>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <v-card class="orders-table-card" elevation="0" rounded="xl">
+      <v-data-table
+        :headers="headers"
+        :items="paginatedOrders"
+        :loading="loading"
+        :items-per-page="itemsPerPage"
+        :page="currentPage"
+        @update:page="currentPage = $event"
+        @update:items-per-page="itemsPerPage = $event"
+        class="orders-table"
+        item-value="id"
+        :items-length="filteredOrders.length"
+      >
+        <template v-slot:item.receiptNumber="{ item }">
+          <span class="receipt-cell">{{ item.receiptNumber }}</span>
+        </template>
 
-      <!-- Pagination -->
-      <div class="pagination-section">
-        <div class="items-per-page">
-          <span>Show</span>
-          <select v-model="itemsPerPage">
-            <option :value="10">10</option>
-            <option :value="25">25</option>
-            <option :value="50">50</option>
-          </select>
-          <span>entries</span>
-        </div>
-        <div class="pagination-controls">
+        <template v-slot:item.customer_name="{ item }">
+          <div class="customer-cell">
+            <div class="customer-name">{{ item.customer_name || "Guest" }}</div>
+            <div v-if="item.customer_phone" class="customer-phone">
+              {{ item.customer_phone }}
+            </div>
+          </div>
+        </template>
+
+        <template v-slot:item.order_type="{ item }">
+          <v-chip
+            :color="getOrderTypeColor(item.order_type)"
+            size="small"
+            text-color="white"
+          >
+            {{ formatOrderType(item.order_type) }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.items="{ item }">
+          <span>{{ item.items?.length || 0 }} items</span>
+        </template>
+
+        <template v-slot:item.total="{ item }">
+          <span class="amount-cell"
+            >KSh {{ (item.total || 0).toFixed(2) }}</span
+          >
+        </template>
+
+        <template v-slot:item.created_at="{ item }">
+          <div class="date-cell">
+            <div>{{ formatDate(item.created_at) }}</div>
+            <div class="date-time">{{ formatTime(item.created_at) }}</div>
+          </div>
+        </template>
+
+        <template v-slot:item.payment_mode="{ item }">
+          <v-chip
+            :color="getPaymentColor(item.payment_mode)"
+            size="small"
+            text-color="white"
+          >
+            <v-icon start size="14">{{
+              getPaymentIcon(item.payment_mode)
+            }}</v-icon>
+            {{ formatPaymentMode(item.payment_mode) }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.payment_status="{ item }">
+          <v-chip
+            :color="getStatusColor(item.payment_status)"
+            size="small"
+            text-color="white"
+          >
+            {{ formatStatus(item.payment_status) }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.actions="{ item }">
           <v-btn
             icon
-            variant="text"
             size="small"
-            @click="prevPage"
-            :disabled="currentPage === 1"
+            variant="text"
+            @click="viewOrderDetails(item)"
           >
-            <v-icon>mdi-chevron-left</v-icon>
+            <v-icon size="18">mdi-eye</v-icon>
           </v-btn>
-          <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+          <v-btn icon size="small" variant="text" @click="printReceipt(item)">
+            <v-icon size="18">mdi-printer</v-icon>
+          </v-btn>
           <v-btn
+            v-if="
+              item.payment_mode === 'debt' && item.payment_status === 'pending'
+            "
             icon
-            variant="text"
             size="small"
-            @click="nextPage"
-            :disabled="currentPage === totalPages"
+            variant="text"
+            color="#2D6A4F"
+            @click="markDebtAsPaid(item)"
           >
-            <v-icon>mdi-chevron-right</v-icon>
+            <v-icon size="18">mdi-check-circle</v-icon>
           </v-btn>
-        </div>
-      </div>
+        </template>
+
+        <template v-slot:bottom>
+          <div class="pagination-section">
+            <div class="items-per-page">
+              <span>Show</span>
+              <select v-model="itemsPerPage" class="items-per-page-select">
+                <option :value="10">10</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+              <span>entries</span>
+            </div>
+            <div class="pagination-info">
+              Showing {{ (currentPage - 1) * itemsPerPage + 1 }} -
+              {{ Math.min(currentPage * itemsPerPage, filteredOrders.length) }}
+              of {{ filteredOrders.length }}
+            </div>
+          </div>
+        </template>
+      </v-data-table>
     </v-card>
-    <v-dialog
-      v-model="showDebtManagement"
-      max-width="900"
-      transition="dialog-transition"
-    >
+
+    <!-- Order Details Dialog -->
+    <v-dialog v-model="detailsDialog" max-width="800">
+      <v-card
+        class="order-details-dialog"
+        :class="{ 'debt-dialog': selectedOrder?.payment_mode === 'debt' }"
+      >
+        <v-card-title class="dialog-header">
+          <div>
+            <div class="receipt-badge">Order Details</div>
+            <h2>{{ selectedOrder?.receipt_number || "N/A" }}</h2>
+          </div>
+          <v-btn icon variant="text" @click="detailsDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text>
+          <!-- Order Info Grid -->
+          <v-row class="order-info-grid" no-gutters>
+            <v-col cols="12" sm="6" class="pa-1">
+              <v-card class="info-card" elevation="0" rounded="lg">
+                <v-card-text>
+                  <div class="info-label">Customer Name</div>
+                  <div class="info-value">
+                    {{ selectedOrder?.customer_name || "Guest" }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" class="pa-1">
+              <v-card class="info-card" elevation="0" rounded="lg">
+                <v-card-text>
+                  <div class="info-label">Order Type</div>
+                  <div class="info-value">
+                    {{ formatOrderType(selectedOrder?.order_type) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" class="pa-1">
+              <v-card class="info-card" elevation="0" rounded="lg">
+                <v-card-text>
+                  <div class="info-label">Table/Number</div>
+                  <div class="info-value">
+                    {{ selectedOrder?.table_number || "N/A" }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" class="pa-1">
+              <v-card class="info-card" elevation="0" rounded="lg">
+                <v-card-text>
+                  <div class="info-label">Date & Time</div>
+                  <div class="info-value">
+                    {{ formatFullDate(selectedOrder?.created_at) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" class="pa-1">
+              <v-card class="info-card" elevation="0" rounded="lg">
+                <v-card-text>
+                  <div class="info-label">Payment Method</div>
+                  <div class="info-value">
+                    <v-chip
+                      :color="getPaymentColor(selectedOrder?.payment_mode)"
+                      size="small"
+                      text-color="white"
+                    >
+                      <v-icon start size="14">{{
+                        getPaymentIcon(selectedOrder?.payment_mode)
+                      }}</v-icon>
+                      {{ formatPaymentMode(selectedOrder?.payment_mode) }}
+                    </v-chip>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="6" class="pa-1">
+              <v-card class="info-card" elevation="0" rounded="lg">
+                <v-card-text>
+                  <div class="info-label">Payment Status</div>
+                  <div class="info-value">
+                    <v-chip
+                      :color="getStatusColor(selectedOrder?.payment_status)"
+                      size="small"
+                      text-color="white"
+                    >
+                      {{ formatStatus(selectedOrder?.payment_status) }}
+                    </v-chip>
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- Debt Notice -->
+          <v-card
+            v-if="
+              selectedOrder?.payment_mode === 'debt' &&
+              selectedOrder?.payment_status === 'pending'
+            "
+            class="debt-notice mt-2"
+            color="#FFF3E0"
+            rounded="lg"
+          >
+            <v-card-text>
+              <v-row align="center" no-gutters>
+                <v-col cols="auto">
+                  <v-icon size="32" color="#E07A5F">mdi-alert-circle</v-icon>
+                </v-col>
+                <v-col class="pl-3">
+                  <div class="font-weight-bold">Debt Order</div>
+                  <p class="mb-1">
+                    This order is recorded as debt. Please collect payment from
+                    the customer.
+                  </p>
+                  <v-btn
+                    size="small"
+                    color="#2D6A4F"
+                    @click="markDebtAsPaid(selectedOrder)"
+                  >
+                    <v-icon start size="16">mdi-check</v-icon>
+                    Mark as Paid
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <!-- Items List -->
+          <div class="items-list mt-4">
+            <h3>Order Items</h3>
+            <v-list>
+              <v-list-item
+                v-for="(item, index) in selectedOrder?.items"
+                :key="index"
+                class="order-item-detail"
+              >
+                <template #prepend>
+                  <v-icon color="#2D6A4F">mdi-food</v-icon>
+                </template>
+                <v-list-item-title class="item-detail-name">
+                  {{ item.name || item.product_name }}
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  <span class="item-unit-price"
+                    >KSh
+                    {{ (item.unit_price || item.price || 0).toFixed(2) }}</span
+                  >
+                  × {{ item.quantity || 1 }}
+                </v-list-item-subtitle>
+                <template #append>
+                  <span class="item-detail-price">
+                    KSh
+                    {{
+                      (
+                        (item.unit_price || item.price || 0) *
+                        (item.quantity || 1)
+                      ).toFixed(2)
+                    }}
+                  </span>
+                </template>
+              </v-list-item>
+            </v-list>
+          </div>
+
+          <!-- Order Summary -->
+          <v-card class="order-summary mt-4" elevation="0" rounded="lg">
+            <v-card-text>
+              <v-row>
+                <v-col cols="6" class="text-left font-weight-medium"
+                  >Subtotal</v-col
+                >
+                <v-col cols="6" class="text-right"
+                  >KSh {{ (selectedOrder?.subtotal || 0).toFixed(2) }}</v-col
+                >
+                <v-col cols="6" class="text-left font-weight-medium">Tax</v-col>
+                <v-col cols="6" class="text-right"
+                  >KSh {{ (selectedOrder?.tax || 0).toFixed(2) }}</v-col
+                >
+                <v-col cols="12" class="pa-0">
+                  <v-divider class="my-2"></v-divider>
+                </v-col>
+                <v-col cols="6" class="text-left font-weight-bold text-h6"
+                  >Total</v-col
+                >
+                <v-col
+                  cols="6"
+                  class="text-right font-weight-bold text-h6 text-error"
+                >
+                  KSh {{ (selectedOrder?.total || 0).toFixed(2) }}
+                </v-col>
+                <v-col
+                  v-if="selectedOrder?.payment_mode === 'debt'"
+                  cols="12"
+                  class="pa-0"
+                >
+                  <v-divider class="my-2"></v-divider>
+                </v-col>
+                <v-col
+                  v-if="selectedOrder?.payment_mode === 'debt'"
+                  cols="6"
+                  class="text-left font-weight-medium"
+                >
+                  Debt Status
+                </v-col>
+                <v-col
+                  v-if="selectedOrder?.payment_mode === 'debt'"
+                  cols="6"
+                  class="text-right"
+                >
+                  <v-chip
+                    :color="getStatusColor(selectedOrder?.payment_status)"
+                    size="small"
+                    text-color="white"
+                  >
+                    {{ formatStatus(selectedOrder?.payment_status) }}
+                  </v-chip>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </v-card-text>
+
+        <v-card-actions class="dialog-actions">
+          <v-btn variant="outlined" @click="printReceipt(selectedOrder)">
+            <v-icon start>mdi-printer</v-icon>
+            Print Receipt
+          </v-btn>
+          <v-btn
+            v-if="
+              selectedOrder?.payment_mode === 'debt' &&
+              selectedOrder?.payment_status === 'pending'
+            "
+            color="#2D6A4F"
+            @click="markDebtAsPaid(selectedOrder)"
+          >
+            <v-icon start>mdi-check</v-icon>
+            Mark as Paid
+          </v-btn>
+          <v-btn color="#2D6A4F" @click="detailsDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Debt Management Dialog -->
+    <v-dialog v-model="showDebtManagement" max-width="900" scrollable>
       <v-card class="debt-management-dialog">
         <v-card-title class="dialog-header">
           <div class="title-content">
@@ -374,166 +662,165 @@
 
         <v-card-text class="dialog-content">
           <!-- Debt Summary Cards -->
-          <div class="debt-summary-cards">
-            <div class="debt-stat-card">
-              <div class="stat-icon" style="background: #e07a5f20">
-                <v-icon color="#E07A5F" size="24">mdi-cash</v-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-value">
-                  ksh{{ debtOverview.total_debt?.toFixed(2) || 0 }}
-                </div>
-                <div class="stat-label">Total Outstanding</div>
-              </div>
-            </div>
-            <div class="debt-stat-card">
-              <div class="stat-icon" style="background: #2d6a4f20">
-                <v-icon color="#2D6A4F" size="24">mdi-account-group</v-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-value">
-                  {{ debtOverview.total_customers || 0 }}
-                </div>
-                <div class="stat-label">Customers with Debt</div>
-              </div>
-            </div>
-            <div class="debt-stat-card">
-              <div class="stat-icon" style="background: #f4a26120">
-                <v-icon color="#F4A261" size="24">mdi-clock-outline</v-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-value">
-                  {{ debtOverview.average_age || 0 }} days
-                </div>
-                <div class="stat-label">Average Age</div>
-              </div>
-            </div>
-          </div>
+          <v-row class="debt-summary-cards" no-gutters>
+            <v-col cols="12" sm="4" class="pa-1">
+              <v-card class="debt-stat-card" elevation="0" rounded="lg">
+                <v-card-text class="pa-3">
+                  <v-row align="center" no-gutters>
+                    <v-col cols="auto">
+                      <div class="stat-icon" style="background: #e07a5f20">
+                        <v-icon color="#E07A5F" size="24">mdi-cash</v-icon>
+                      </div>
+                    </v-col>
+                    <v-col class="pl-3">
+                      <div class="stat-value">
+                        KSh {{ (debtOverview.total_debt || 0).toFixed(2) }}
+                      </div>
+                      <div class="stat-label">Total Outstanding</div>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="4" class="pa-1">
+              <v-card class="debt-stat-card" elevation="0" rounded="lg">
+                <v-card-text class="pa-3">
+                  <v-row align="center" no-gutters>
+                    <v-col cols="auto">
+                      <div class="stat-icon" style="background: #2d6a4f20">
+                        <v-icon color="#2D6A4F" size="24"
+                          >mdi-account-group</v-icon
+                        >
+                      </div>
+                    </v-col>
+                    <v-col class="pl-3">
+                      <div class="stat-value">
+                        {{ debtOverview.total_customers || 0 }}
+                      </div>
+                      <div class="stat-label">Customers with Debt</div>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" sm="4" class="pa-1">
+              <v-card class="debt-stat-card" elevation="0" rounded="lg">
+                <v-card-text class="pa-3">
+                  <v-row align="center" no-gutters>
+                    <v-col cols="auto">
+                      <div class="stat-icon" style="background: #f4a26120">
+                        <v-icon color="#F4A261" size="24"
+                          >mdi-clock-outline</v-icon
+                        >
+                      </div>
+                    </v-col>
+                    <v-col class="pl-3">
+                      <div class="stat-value">
+                        {{ debtOverview.average_age || 0 }} days
+                      </div>
+                      <div class="stat-label">Average Age</div>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
 
-          <!-- Debt Aging Breakdown -->
-          <div class="debt-aging-section">
-            <div class="aging-header">
-              <span class="aging-title">📊 Aging Breakdown</span>
-            </div>
-            <div class="aging-bars">
-              <div class="aging-item">
-                <span class="aging-label">0-7 Days</span>
-                <div class="aging-bar">
-                  <div
-                    class="aging-fill"
-                    :style="{
-                      width: getAgingPercentage('0-7_days') + '%',
-                      background: getAgingColor('0-7_days'),
-                    }"
-                  ></div>
-                </div>
-                <span class="aging-amount"
-                  >ksh{{
-                    debtOverview.by_age?.["0-7_days"]?.toFixed(2) || 0
-                  }}</span
-                >
+          <!-- Aging Breakdown -->
+          <v-card class="debt-aging-card mt-2" elevation="0" rounded="lg">
+            <v-card-text class="pa-3">
+              <div class="aging-header mb-2">
+                <span class="aging-title">📊 Aging Breakdown</span>
               </div>
-              <div class="aging-item">
-                <span class="aging-label">8-14 Days</span>
-                <div class="aging-bar">
-                  <div
-                    class="aging-fill"
-                    :style="{
-                      width: getAgingPercentage('8-14_days') + '%',
-                      background: getAgingColor('8-14_days'),
-                    }"
-                  ></div>
-                </div>
-                <span class="aging-amount"
-                  >ksh{{
-                    debtOverview.by_age?.["8-14_days"]?.toFixed(2) || 0
-                  }}</span
+              <div class="aging-bars">
+                <div
+                  v-for="(item, key) in agingData"
+                  :key="key"
+                  class="aging-item"
                 >
-              </div>
-              <div class="aging-item">
-                <span class="aging-label">15-30 Days</span>
-                <div class="aging-bar">
-                  <div
-                    class="aging-fill"
-                    :style="{
-                      width: getAgingPercentage('15-30_days') + '%',
-                      background: getAgingColor('15-30_days'),
-                    }"
-                  ></div>
+                  <span class="aging-label">{{ item.label }}</span>
+                  <div class="aging-bar">
+                    <div
+                      class="aging-fill"
+                      :style="{
+                        width: getAgingPercentage(key) + '%',
+                        background: item.color,
+                      }"
+                    ></div>
+                  </div>
+                  <span class="aging-amount"
+                    >KSh {{ getAgingAmount(key) }}</span
+                  >
                 </div>
-                <span class="aging-amount"
-                  >ksh{{
-                    debtOverview.by_age?.["15-30_days"]?.toFixed(2) || 0
-                  }}</span
-                >
               </div>
-              <div class="aging-item">
-                <span class="aging-label">30+ Days</span>
-                <div class="aging-bar">
-                  <div
-                    class="aging-fill"
-                    :style="{
-                      width: getAgingPercentage('30+_days') + '%',
-                      background: getAgingColor('30+_days'),
-                    }"
-                  ></div>
-                </div>
-                <span class="aging-amount"
-                  >ksh{{
-                    debtOverview.by_age?.["30+_days"]?.toFixed(2) || 0
-                  }}</span
-                >
-              </div>
-            </div>
-          </div>
+            </v-card-text>
+          </v-card>
 
           <!-- Debt List -->
-          <div class="debt-list-section">
+          <div class="debt-list-section mt-4">
             <div class="list-header">
-              <span class="list-title">📋 All Pending Debts</span>
-              <span class="list-count"
-                >{{ debtOverview.debts?.length || 0 }} orders</span
+              <span class="list-title">📋 All Pending Debts </span>
+              <span class="list-count">
+                {{ debtOverview.debts?.length || 0 }} orders</span
               >
             </div>
             <div class="debt-list">
-              <div
+              <v-card
                 v-for="debt in debtOverview.debts"
                 :key="debt.id"
                 class="debt-list-item"
                 :class="{ overdue: debt.age_days > 7 }"
+                elevation="0"
+                rounded="lg"
               >
-                <div class="debt-item-info">
-                  <div class="debt-item-customer">{{ debt.customerName }}</div>
-                  <div class="debt-item-receipt">{{ debt.receiptNumber }}</div>
-                  <div class="debt-item-date">
-                    {{ formatDate(debt.created_at) }}
-                  </div>
-                </div>
-                <div class="debt-item-amount">
-                  ksh{{ debt.total.toFixed(2) }}
-                </div>
-                <div class="debt-item-age">
-                  <span :class="{ 'overdue-text': debt.age_days > 7 }">
-                    {{ debt.age_days }} days
-                  </span>
-                  <v-chip
-                    v-if="debt.age_days > 7"
-                    size="x-small"
-                    color="#EF4444"
-                    text-color="white"
-                  >
-                    Overdue
-                  </v-chip>
-                </div>
-                <v-btn
-                  size="small"
-                  color="#2D6A4F"
-                  @click="markDebtAsPaid(debt)"
-                >
-                  <v-icon start size="16">mdi-check</v-icon>
-                  Mark Paid
-                </v-btn>
-              </div>
+                <v-card-text class="pa-3">
+                  <v-row align="center" no-gutters>
+                    <v-col cols="12" sm="4">
+                      <div class="debt-item-customer">
+                        {{ debt.customerName || "Guest" }}
+                      </div>
+                      <div class="debt-item-receipt">
+                        {{ debt.receiptNumber }}
+                      </div>
+                    </v-col>
+                    <v-col cols="6" sm="3" class="text-left text-sm-center">
+                      <div class="debt-item-date">
+                        {{ formatDate(debt.created_at) }}
+                      </div>
+                    </v-col>
+                    <v-col cols="6" sm="2" class="text-right text-sm-center">
+                      <div class="debt-item-amount">
+                        KSh {{ (debt.total || 0).toFixed(2) }}
+                      </div>
+                    </v-col>
+                    <v-col cols="6" sm="2" class="text-left text-sm-center">
+                      <div class="debt-item-age">
+                        <span :class="{ 'overdue-text': debt.age_days > 7 }">
+                          {{ debt.age_days || 0 }} days
+                        </span>
+                        <v-chip
+                          v-if="debt.age_days > 7"
+                          size="x-small"
+                          color="#EF4444"
+                          text-color="white"
+                        >
+                          Overdue
+                        </v-chip>
+                      </div>
+                    </v-col>
+                    <v-col cols="6" sm="1" class="text-right">
+                      <v-btn
+                        size="small"
+                        color="#2D6A4F"
+                        @click="markDebtAsPaid(debt)"
+                      >
+                        <v-icon start size="16">mdi-check</v-icon>
+                        Pay
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
               <div v-if="!debtOverview.debts?.length" class="no-debts">
                 <v-icon size="48" color="#E5E7EB">mdi-check-circle</v-icon>
                 <p>No outstanding debts! 🎉</p>
@@ -561,247 +848,25 @@
       </v-card>
     </v-dialog>
 
-    <!-- Order Details Dialog -->
-    <v-dialog v-model="detailsDialog" max-width="800">
-      <v-card
-        class="order-details-dialog"
-        :class="{ 'debt-dialog': selectedOrder?.paymentMode === 'debt' }"
-      >
-        <div class="dialog-header">
-          <div>
-            <div class="receipt-badge">Order Details</div>
-            <h2>{{ selectedOrder?.receiptNumber }}</h2>
-          </div>
-          <v-btn icon variant="text" @click="detailsDialog = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-
-        <div class="order-info-grid">
-          <div class="info-card">
-            <div class="info-label">Customer Name</div>
-            <div class="info-value">{{ selectedOrder?.customerName }}</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">Order Type</div>
-            <div class="info-value">{{ selectedOrder?.orderType }}</div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">Table/Number</div>
-            <div class="info-value">
-              {{ selectedOrder?.tableNumber || "N/A" }}
-            </div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">Date & Time</div>
-            <div class="info-value">
-              {{ formatDate(selectedOrder?.created_at) }}
-            </div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">Payment Method</div>
-            <div class="info-value">
-              <span class="payment-badge" :class="selectedOrder?.paymentMode">
-                <v-icon size="14" class="mr-1">
-                  {{ getPaymentIcon(selectedOrder?.paymentMode) }}
-                </v-icon>
-                {{ selectedOrder?.paymentMode }}
-              </span>
-            </div>
-          </div>
-          <div class="info-card">
-            <div class="info-label">Payment Status</div>
-            <div class="info-value">
-              <span class="status-badge" :class="selectedOrder?.paymentStatus">
-                {{ selectedOrder?.paymentStatus || "completed" }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Debt Order Note -->
-        <div
-          v-if="
-            selectedOrder?.paymentMode === 'debt' &&
-            selectedOrder?.paymentStatus === 'pending'
-          "
-          class="debt-notice"
-        >
-          <v-icon size="24" color="#E07A5F">mdi-alert-circle</v-icon>
-          <div>
-            <strong>Debt Order</strong>
-            <p>
-              This order is recorded as debt. Please collect payment from the
-              customer.
-            </p>
-            <v-btn
-              size="small"
-              color="#2D6A4F"
-              @click="markDebtAsPaid(selectedOrder)"
-            >
-              <v-icon start size="16">mdi-check</v-icon>
-              Mark as Paid
-            </v-btn>
-          </div>
-        </div>
-
-        <div class="items-list">
-          <h3>Order Items</h3>
-          <div
-            v-for="item in selectedOrder?.items"
-            :key="item.id"
-            class="order-item-detail"
-          >
-            <div class="item-detail-info">
-              <div class="item-detail-name">{{ item.name }}</div>
-              <div class="item-detail-meta">
-                <span>{{ item.size || "Regular" }}</span>
-                <span>{{ item.temp || "Hot" }}</span>
-              </div>
-            </div>
-            <div class="item-detail-qty">
-              <span class="item-unit-price">ksh{{ item.price }}</span>
-              x {{ item.quantity }}
-            </div>
-            <div class="item-detail-price">
-              ksh{{ (item.price * item.quantity).toFixed(2) }}
-            </div>
-          </div>
-        </div>
-
-        <div class="order-summary">
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span>ksh{{ selectedOrder?.subtotal }}</span>
-          </div>
-          <div class="summary-row">
-            <span>Tax (10%)</span>
-            <span>ksh{{ selectedOrder?.tax }}</span>
-          </div>
-          <div class="summary-row total">
-            <span>Total</span>
-            <span>ksh{{ selectedOrder?.total }}</span>
-          </div>
-          <div
-            v-if="selectedOrder?.paymentMode === 'debt'"
-            class="summary-row debt-note-row"
-          >
-            <span>Debt Status</span>
-            <span class="status-badge" :class="selectedOrder?.paymentStatus">
-              {{ selectedOrder?.paymentStatus || "pending" }}
-            </span>
-          </div>
-        </div>
-
-        <div class="dialog-actions">
-          <v-btn variant="outlined" @click="printReceipt(selectedOrder)">
-            <v-icon start>mdi-printer</v-icon>
-            Print Receipt
-          </v-btn>
-          <v-btn
-            v-if="
-              selectedOrder?.paymentMode === 'debt' &&
-              selectedOrder?.paymentStatus === 'pending'
-            "
-            color="#2D6A4F"
-            @click="markDebtAsPaid(selectedOrder)"
-          >
-            <v-icon start>mdi-check</v-icon>
-            Mark as Paid
-          </v-btn>
-          <v-btn color="#2D6A4F" @click="detailsDialog = false">Close</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Debt Management Dialog -->
-    <!-- <v-dialog v-model="showDebtManagement" max-width="900">
-      <v-card class="debt-management-dialog">
-        <div class="dialog-header">
-          <div>
-            <div class="receipt-badge">Debt Management</div>
-            <h2>Outstanding Debts</h2>
-            <p class="subtitle">Manage and track all pending debt orders</p>
-          </div>
-          <v-btn icon variant="text" @click="showDebtManagement = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-
-        <div class="debt-summary">
-          <div class="debt-stat">
-            <div class="debt-stat-value">{{ debtOrders.length }}</div>
-            <div class="debt-stat-label">Pending Debts</div>
-          </div>
-          <div class="debt-stat">
-            <div class="debt-stat-value">ksh{{ totalDebt }}</div>
-            <div class="debt-stat-label">Total Outstanding</div>
-          </div>
-          <div class="debt-stat">
-            <div class="debt-stat-value">{{ uniqueDebtCustomers.length }}</div>
-            <div class="debt-stat-label">Customers with Debt</div>
-          </div>
-        </div>
-
-        <div class="debt-list">
-          <div v-for="order in debtOrders" :key="order.id" class="debt-item">
-            <div class="debt-item-info">
-              <div class="debt-customer">
-                <div class="debt-customer-name">{{ order.customerName }}</div>
-                <div class="debt-order-ref">{{ order.receiptNumber }}</div>
-              </div>
-              <div class="debt-item-details">
-                <div class="debt-amount">ksh{{ order.total }}</div>
-                <div class="debt-date">{{ formatDate(order.created_at) }}</div>
-              </div>
-            </div>
-            <div class="debt-item-actions">
-              <v-btn
-                size="small"
-                variant="text"
-                @click="viewOrderDetails(order)"
-              >
-                <v-icon size="16">mdi-eye</v-icon>
-              </v-btn>
-              <v-btn
-                size="small"
-                color="#2D6A4F"
-                @click="markDebtAsPaid(order)"
-              >
-                <v-icon start size="16">mdi-check</v-icon>
-                Mark Paid
-              </v-btn>
-            </div>
-          </div>
-          <div v-if="debtOrders.length === 0" class="no-debts">
-            <v-icon size="48" color="#E5E7EB">mdi-check-circle</v-icon>
-            <p>No outstanding debts! 🎉</p>
-            <span>All debt orders have been cleared.</span>
-          </div>
-        </div>
-      </v-card>
-    </v-dialog> -->
-
     <!-- Mark Debt as Paid Confirmation Dialog -->
     <v-dialog v-model="showPaidConfirmation" max-width="400">
-      <v-card class="confirm-dialog">
-        <div class="confirm-icon">
-          <v-icon size="64" color="#2D6A4F">mdi-check-circle</v-icon>
-        </div>
-        <h3>Mark Debt as Paid?</h3>
-        <p>
-          Confirm that <strong>{{ selectedOrder?.customerName }}</strong> has
-          paid <strong>ksh{{ selectedOrder?.total }}</strong> for order
+      <v-card class="confirm-dialog text-center pa-6">
+        <v-icon size="64" color="#2D6A4F">mdi-check-circle</v-icon>
+        <h3 class="mt-4">Mark Debt as Paid?</h3>
+        <p class="mt-2 text-medium-emphasis">
+          Confirm that
+          <strong>{{ selectedOrder?.customer_name || "Guest" }}</strong> has
+          paid
+          <strong>KSh {{ (selectedOrder?.total || 0).toFixed(2) }}</strong> for
+          order
           <strong>{{ selectedOrder?.receiptNumber }}</strong>
         </p>
-        <div class="confirm-actions">
-          <v-btn variant="text" @click="showPaidConfirmation = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="#2D6A4F" @click="confirmMarkAsPaid"
-            >Confirm Payment</v-btn
-          >
-        </div>
+        <v-btn variant="text" @click="showPaidConfirmation = false" class="mr-2"
+          >Cancel</v-btn
+        >
+        <v-btn color="#2D6A4F" @click="confirmMarkAsPaid"
+          >Confirm Payment</v-btn
+        >
       </v-card>
     </v-dialog>
 
@@ -825,6 +890,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { usePosStore } from "~/stores/pos";
+import { useReceipt } from "~/composables/useReceipt";
 
 definePageMeta({
   layout: "default",
@@ -832,6 +898,10 @@ definePageMeta({
 });
 
 const store = usePosStore();
+const receipt = useReceipt();
+
+// State
+const loading = ref(false);
 const searchQuery = ref("");
 const selectedType = ref("");
 const selectedPaymentMode = ref("");
@@ -840,12 +910,10 @@ const dateFilter = ref("");
 const itemsPerPage = ref(10);
 const currentPage = ref(1);
 const detailsDialog = ref(false);
-// const showDebtManagement = ref(false);
-// const showPaidConfirmation = ref(false);
-const selectedOrder = ref(null);
-
 const showDebtManagement = ref(false);
 const showPaidConfirmation = ref(false);
+const selectedOrder = ref(null);
+
 const debtOverview = ref({
   total_debt: 0,
   total_customers: 0,
@@ -866,59 +934,66 @@ const snackbar = ref({
   icon: "mdi-check-circle",
 });
 
+// Table Headers
+const headers = [
+  { title: "Receipt #", key: "receipt_number", sortable: true },
+  { title: "Customer", key: "customer_name", sortable: true },
+  { title: "Order Type", key: "order_type", sortable: true },
+  { title: "Items", key: "items", sortable: true },
+  { title: "Total", key: "total", sortable: true },
+  { title: "Date", key: "created_at", sortable: true },
+  { title: "Payment", key: "payment_mode", sortable: true },
+  { title: "Status", key: "payment_status", sortable: true },
+  { title: "Actions", key: "actions", sortable: false },
+];
+
+// Computed
 const orders = computed(() => store.AllOrders || []);
 
-// Debt orders filter
 const debtOrders = computed(() => {
   return orders.value.filter(
-    (order) => order.paymentMode === "debt" && order.paymentStatus === "pending"
+    (order) =>
+      order.payment_mode === "debt" && order.payment_status === "pending"
   );
 });
-const debtList = computed(() => debtOverview.value.debts || []);
 
 const hasDebtOrders = computed(() => debtOrders.value.length > 0);
-const totalDebt = computed(() => {
-  return debtOrders.value
-    .reduce((sum, order) => sum + order.total, 0)
-    .toFixed(2);
-});
 const debtCount = computed(() => debtOrders.value.length);
 
-const uniqueDebtCustomers = computed(() => {
-  const customers = new Set(debtOrders.value.map((o) => o.customerName));
-  return Array.from(customers);
+const totalDebt = computed(() => {
+  return debtOrders.value
+    .reduce((sum, order) => sum + (order.total || 0), 0)
+    .toFixed(2);
 });
 
 const filteredOrders = computed(() => {
   let filtered = [...orders.value];
 
   if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(
       (order) =>
-        order.receiptNumber
-          ?.toLowerCase()
-          .includes(searchQuery.value.toLowerCase()) ||
-        order.customerName
-          ?.toLowerCase()
-          .includes(searchQuery.value.toLowerCase())
+        order.receiptNumber?.toLowerCase().includes(query) ||
+        order.customer_name?.toLowerCase().includes(query) ||
+        order.customer_phone?.includes(query)
     );
   }
 
   if (selectedType.value) {
     filtered = filtered.filter(
-      (order) => order.orderType === selectedType.value
+      (order) => order.order_type === selectedType.value
     );
   }
 
   if (selectedPaymentMode.value) {
     filtered = filtered.filter(
-      (order) => order.paymentMode === selectedPaymentMode.value
+      (order) => order.payment_mode === selectedPaymentMode.value
     );
   }
 
   if (selectedStatus.value) {
     filtered = filtered.filter(
-      (order) => order.paymentStatus === selectedStatus.value
+      (order) => order.payment_status === selectedStatus.value
     );
   }
 
@@ -934,22 +1009,22 @@ const filteredOrders = computed(() => {
 
 const totalRevenue = computed(() => {
   return filteredOrders.value
-    .filter((order) => order.paymentStatus === "completed")
-    .reduce((sum, order) => sum + order.total, 0)
+    .filter(
+      (order) =>
+        order.payment_status === "paid" || order.payment_status === "completed"
+    )
+    .reduce((sum, order) => sum + (order.total || 0), 0)
     .toFixed(2);
 });
 
 const avgOrderValue = computed(() => {
   const completedOrders = filteredOrders.value.filter(
-    (order) => order.paymentStatus === "completed"
+    (order) =>
+      order.payment_status === "paid" || order.payment_status === "completed"
   );
-  if (completedOrders.length === 0) return "0";
+  if (completedOrders.length === 0) return "0.00";
   return (parseFloat(totalRevenue.value) / completedOrders.length).toFixed(2);
 });
-
-const totalPages = computed(() =>
-  Math.ceil(filteredOrders.value.length / itemsPerPage.value)
-);
 
 const paginatedOrders = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
@@ -957,55 +1032,155 @@ const paginatedOrders = computed(() => {
   return filteredOrders.value.slice(start, end);
 });
 
+// Aging Data
+const agingData = {
+  "0-7_days": { label: "0-7 Days", color: "#2D6A4F" },
+  "8-14_days": { label: "8-14 Days", color: "#F4A261" },
+  "15-30_days": { label: "15-30 Days", color: "#E07A5F" },
+  "30+_days": { label: "30+ Days", color: "#EF4444" },
+};
+
+// Helper Methods
+const formatDate = (date: string) => {
+  if (!date) return "N/A";
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatTime = (date: string) => {
+  if (!date) return "";
+  return new Date(date).toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatFullDate = (date: string) => {
+  if (!date) return "N/A";
+  return new Date(date).toLocaleString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const formatOrderType = (type: string) => {
+  const types: Record<string, string> = {
+    "dine-in": "Dine In",
+    takeaway: "Take Away",
+    delivery: "Delivery",
+    "order-online": "Online",
+  };
+  return types[type] || type || "N/A";
+};
+
+const formatPaymentMode = (mode: string) => {
+  const modes: Record<string, string> = {
+    cash: "Cash",
+    mpesa: "M-Pesa",
+    debt: "Debt",
+    card: "Card",
+  };
+  return modes[mode] || mode || "N/A";
+};
+
+const formatStatus = (status: string) => {
+  const statuses: Record<string, string> = {
+    paid: "Paid",
+    completed: "Completed",
+    pending: "Pending",
+    overdue: "Overdue",
+    cancelled: "Cancelled",
+    partial: "Partial",
+    refunded: "Refunded",
+  };
+  return statuses[status] || status || "N/A";
+};
+
 const getPaymentIcon = (mode: string) => {
   const icons: Record<string, string> = {
     cash: "mdi-cash",
     mpesa: "mdi-cellphone",
     debt: "mdi-account-cash",
+    card: "mdi-credit-card",
   };
   return icons[mode] || "mdi-help-circle";
 };
 
-const formatDate = (date) => {
-  if (!date) return "N/A";
-  return new Date(date).toLocaleString();
+const getOrderTypeColor = (type: string) => {
+  const colors: Record<string, string> = {
+    "dine-in": "#2D6A4F",
+    takeaway: "#F4A261",
+    delivery: "#4A90D9",
+    "order-online": "#6B4E71",
+  };
+  return colors[type] || "#6B7280";
 };
 
-const prevPage = () => {
-  if (currentPage.value > 1) currentPage.value--;
+const getPaymentColor = (mode: string) => {
+  const colors: Record<string, string> = {
+    cash: "#2D6A4F",
+    mpesa: "#4A90D9",
+    debt: "#E07A5F",
+    card: "#6B4E71",
+  };
+  return colors[mode] || "#6B7280";
 };
 
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) currentPage.value++;
+const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    paid: "#2D6A4F",
+    completed: "#2D6A4F",
+    pending: "#F4A261",
+    overdue: "#E07A5F",
+    cancelled: "#6B7280",
+    partial: "#F4A261",
+    refunded: "#6B7280",
+  };
+  return colors[status] || "#6B7280";
 };
 
-const viewOrderDetails = (order) => {
+const getAgingPercentage = (key: string) => {
+  const total = debtOverview.value.total_debt || 0;
+  const value =
+    debtOverview.value.by_age?.[
+      key as keyof typeof debtOverview.value.by_age
+    ] || 0;
+  return total > 0 ? (value / total) * 100 : 0;
+};
+
+const getAgingAmount = (key: string) => {
+  return (
+    debtOverview.value.by_age?.[
+      key as keyof typeof debtOverview.value.by_age
+    ] || 0
+  ).toFixed(2);
+};
+
+// Actions
+const viewOrderDetails = (order: any) => {
   selectedOrder.value = order;
   detailsDialog.value = true;
 };
 
-const fetchDebtOverview = async () => {
-  try {
-    const response = await store.getDebtOverview();
-    debtOverview.value = response;
-  } catch (error) {
-    console.error("Error fetching debt overview:", error);
+const printReceipt = (order: any) => {
+  if (order) {
+    receipt.printReceipt(order);
   }
 };
 
-const printReceipt = (order) => {
-  // Use the receipt composable
-  const { printReceipt } = useReceipt();
-  printReceipt(order);
-};
-
-const markDebtAsPaid = (order) => {
+const markDebtAsPaid = (order: any) => {
   selectedOrder.value = order;
   showPaidConfirmation.value = true;
 };
 
 const confirmMarkAsPaid = async () => {
-  const store = usePosStore();
   if (!selectedOrder.value) return;
 
   try {
@@ -1014,14 +1189,12 @@ const confirmMarkAsPaid = async () => {
     await fetchDebtOverview();
     await store.getAllOrders();
 
-    // For demo, update locally
+    // Update local state
     const orderIndex = store.AllOrders.findIndex(
       (o) => o._id === selectedOrder.value._id
     );
     if (orderIndex !== -1) {
-      store.AllOrders[orderIndex].paymentStatus = "completed";
-      store.AllOrders[orderIndex].clearedAt = new Date().toISOString();
-      store.AllOrders[orderIndex].clearedBy = "Cashier";
+      store.AllOrders[orderIndex].payment_status = "paid";
     }
 
     showPaidConfirmation.value = false;
@@ -1030,7 +1203,9 @@ const confirmMarkAsPaid = async () => {
 
     snackbar.value = {
       show: true,
-      text: `Debt of ksh${selectedOrder.value.total} from ${selectedOrder.value.customerName} marked as paid!`,
+      text: `Debt of KSh ${(selectedOrder.value.total || 0).toFixed(2)} from ${
+        selectedOrder.value.customer_name || "Guest"
+      } marked as paid!`,
       color: "success",
       icon: "mdi-check-circle",
     };
@@ -1047,11 +1222,25 @@ const confirmMarkAsPaid = async () => {
   }
 };
 
+const fetchDebtOverview = async () => {
+  try {
+    const response = await store.getDebtOverview();
+    debtOverview.value = response;
+  } catch (error) {
+    console.error("Error fetching debt overview:", error);
+  }
+};
+
+const refreshDebtData = () => {
+  fetchDebtOverview();
+};
+
 const exportOrders = () => {
   // Export orders as CSV
   const headers = [
     "Receipt #",
     "Customer",
+    "Phone",
     "Order Type",
     "Items",
     "Total",
@@ -1059,23 +1248,25 @@ const exportOrders = () => {
     "Status",
     "Date",
   ];
+
   const rows = filteredOrders.value.map((order) => [
-    order.receiptNumber,
-    order.customerName,
-    order.orderType,
-    order.items.length,
-    order.total,
-    order.paymentMode,
-    order.paymentStatus,
-    new Date(order.created_at).toLocaleString(),
+    order.receiptNumber || "",
+    order.customer_name || "Guest",
+    order.customer_phone || "",
+    formatOrderType(order.order_type),
+    order.items?.length || 0,
+    (order.total || 0).toFixed(2),
+    formatPaymentMode(order.payment_mode),
+    formatStatus(order.payment_status),
+    formatFullDate(order.created_at),
   ]);
 
   let csv = headers.join(",") + "\n";
   rows.forEach((row) => {
-    csv += row.join(",") + "\n";
+    csv += row.map((item) => `"${item}"`).join(",") + "\n";
   });
 
-  const blob = new Blob([csv], { type: "text/csv" });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -1084,48 +1275,62 @@ const exportOrders = () => {
   URL.revokeObjectURL(url);
 };
 
-const refreshDebtData = () => {
-  console.log("Refreshing debt data...");
-  fetchDebtOverview();
+const exportDebtReport = () => {
+  const headers = [
+    "Customer",
+    "Receipt #",
+    "Amount",
+    "Date",
+    "Age (days)",
+    "Status",
+  ];
+
+  const rows = (debtOverview.value.debts || []).map((debt: any) => [
+    debt.customerName || "Guest",
+    debt.receiptNumber || "",
+    (debt.total || 0).toFixed(2),
+    formatDate(debt.created_at),
+    debt.age_days || 0,
+    debt.age_days > 7 ? "Overdue" : "Current",
+  ]);
+
+  let csv = headers.join(",") + "\n";
+  rows.forEach((row) => {
+    csv += row.map((item) => `"${item}"`).join(",") + "\n";
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `debt_report_${new Date().toISOString().split("T")[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 };
 
-const getAgingPercentage = (key: string) => {
-  const total = debtOverview.value.total_debt || 0;
-  const value =
-    debtOverview.value.by_age?.[
-      key as keyof typeof debtOverview.value.by_age
-    ] || 0;
-  return total > 0 ? (value / total) * 100 : 0;
-};
-
-const getAgingColor = (key: string) => {
-  const colors: Record<string, string> = {
-    "0-7_days": "#2D6A4F",
-    "8-14_days": "#F4A261",
-    "15-30_days": "#E07A5F",
-    "30+_days": "#EF4444",
-  };
-  return colors[key] || "#9CA3AF";
-};
-
+// Lifecycle
 onMounted(async () => {
-  await fetchDebtOverview();
-  await store.getAllOrders();
+  loading.value = true;
+  try {
+    await store.getAllOrders();
+    await fetchDebtOverview();
+  } catch (error) {
+    console.error("Error loading orders:", error);
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 
 <style scoped>
 .orders-container {
-  padding: 32px;
+  padding: 24px;
   background: #f8f6f2;
   min-height: calc(100vh - 64px);
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .page-badge {
@@ -1134,15 +1339,14 @@ onMounted(async () => {
   color: #e07a5f;
   text-transform: uppercase;
   letter-spacing: 2px;
-  margin-bottom: 8px;
 }
 
 .page-title {
   font-family: "Playfair Display", serif;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   color: #1b4332;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .page-subtitle {
@@ -1152,365 +1356,6 @@ onMounted(async () => {
 .export-btn {
   border-color: #e5e7eb;
   border-radius: 40px;
-}
-
-.filters-section {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 24px;
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.search-wrapper {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  background: #f8f6f2;
-  border-radius: 40px;
-  padding: 0 16px;
-  gap: 12px;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  padding: 12px 0;
-  background: transparent;
-  outline: none;
-}
-
-.filter-group {
-  display: flex;
-  gap: 12px;
-}
-
-.filter-select,
-.date-picker {
-  padding: 8px 16px;
-  border-radius: 40px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  outline: none;
-}
-
-.stats-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.summary-card {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.summary-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.summary-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: #1b4332;
-}
-
-.summary-label {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.orders-table-card {
-  border-radius: 24px;
-  overflow: hidden;
-}
-
-.table-container {
-  overflow-x: auto;
-}
-
-.orders-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.orders-table th {
-  text-align: left;
-  padding: 16px 20px;
-  background: #f8f6f2;
-  font-weight: 600;
-  color: #374151;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.orders-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #4b5563;
-}
-
-.receipt-cell {
-  font-weight: 600;
-  color: #1b4332;
-  font-family: monospace;
-}
-
-.amount-cell {
-  font-weight: 600;
-  color: #e07a5f;
-}
-
-.order-type-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.order-type-badge.dine-in {
-  background: #2d6a4f20;
-  color: #2d6a4f;
-}
-
-.order-type-badge.take-away {
-  background: #f4a26120;
-  color: #f4a261;
-}
-
-.order-type-badge.order-online {
-  background: #6b4e7120;
-  color: #6b4e71;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.status-badge.completed {
-  background: #2d6a4f20;
-  color: #2d6a4f;
-}
-
-.status-badge.preparing {
-  background: #f4a26120;
-  color: #f4a261;
-}
-
-.status-badge.cancelled {
-  background: #e07a5f20;
-  color: #e07a5f;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.pagination-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-top: 1px solid #f3f4f6;
-}
-
-.items-per-page {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.items-per-page select {
-  padding: 4px 8px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-info {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-/* Dialog Styles */
-.order-details-dialog {
-  border-radius: 32px !important;
-}
-
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px 24px 0;
-}
-
-.dialog-header .receipt-badge {
-  font-size: 11px;
-  font-weight: 600;
-  color: #e07a5f;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-}
-
-.dialog-header h2 {
-  font-family: "Playfair Display", serif;
-  font-size: 24px;
-  font-weight: 700;
-  color: #1b4332;
-}
-
-.order-info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-  padding: 24px;
-}
-
-.info-card {
-  background: #f8f6f2;
-  padding: 16px;
-  border-radius: 16px;
-}
-
-.info-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-.info-value {
-  font-weight: 600;
-  color: #1b4332;
-}
-
-.items-list {
-  padding: 0 24px;
-}
-
-.items-list h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1b4332;
-  margin-bottom: 16px;
-}
-
-.order-item-detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.item-detail-name {
-  font-weight: 600;
-  color: #1b4332;
-  margin-bottom: 4px;
-}
-
-.item-detail-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.item-detail-price {
-  font-weight: 600;
-  color: #e07a5f;
-}
-
-.order-summary {
-  background: #f8f6f2;
-  margin: 24px;
-  padding: 20px;
-  border-radius: 20px;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 14px;
-}
-
-.summary-row.total {
-  border-top: 2px solid #e5e7eb;
-  margin-top: 8px;
-  padding-top: 12px;
-  font-size: 18px;
-  font-weight: 800;
-  color: #1b4332;
-}
-
-.dialog-actions {
-  padding: 16px 24px 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-.debt-row {
-  background: #fff8f0;
-  border-left: 3px solid #e07a5f;
-}
-
-.debt-row:hover {
-  background: #fff3e0;
-}
-
-.payment-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.payment-badge.cash {
-  background: #2d6a4f20;
-  color: #2d6a4f;
-}
-
-.payment-badge.mpesa {
-  background: #6b4e7120;
-  color: #6b4e71;
-}
-
-.payment-badge.debt {
-  background: #e07a5f20;
-  color: #e07a5f;
 }
 
 .debt-btn {
@@ -1524,221 +1369,13 @@ onMounted(async () => {
   background: #ffe8cc;
 }
 
-.debt-dialog {
-  border: 2px solid #e07a5f;
-}
-
-.debt-notice {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 24px;
-  background: #fff3e0;
-  border-radius: 16px;
-  margin: 0 24px 16px 24px;
-  border: 1px solid #e07a5f40;
-}
-
-.debt-notice p {
-  margin: 4px 0;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.debt-notice strong {
-  color: #1b4332;
-  font-size: 16px;
-}
-
-.summary-sub {
-  font-size: 11px;
-  color: #6b7280;
-  margin-top: 2px;
-}
-
-/* Debt Management Dialog */
-.debt-management-dialog {
-  border-radius: 32px !important;
-  overflow: hidden;
-}
-
-.debt-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  padding: 16px 24px;
-}
-
-.debt-stat {
-  background: #f8f6f2;
-  padding: 16px;
-  border-radius: 16px;
-  text-align: center;
-}
-
-.debt-stat-value {
-  font-size: 28px;
-  font-weight: 800;
-  color: #1b4332;
-}
-
-.debt-stat-label {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 4px;
-}
-
-.debt-list {
-  padding: 0 24px 24px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.debt-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #f8f6f2;
-  border-radius: 16px;
-  border-left: 4px solid #e07a5f;
-  transition: all 0.3s ease;
-}
-
-.debt-item:hover {
-  background: #f0ede5;
-}
-
-.debt-item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.debt-customer-name {
-  font-weight: 700;
-  color: #1b4332;
-  font-size: 16px;
-}
-
-.debt-order-ref {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.debt-item-details {
-  text-align: right;
-}
-
-.debt-amount {
-  font-size: 18px;
-  font-weight: 800;
-  color: #e07a5f;
-}
-
-.debt-date {
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.debt-item-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.no-debts {
-  text-align: center;
-  padding: 48px;
-  color: #6b7280;
-}
-
-.no-debts p {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1b4332;
-  margin-top: 16px;
-}
-
-/* Confirm Dialog */
-.confirm-dialog {
-  text-align: center;
-  padding: 32px;
-  border-radius: 32px !important;
-}
-
-.confirm-icon {
-  margin-bottom: 20px;
-}
-
-.confirm-dialog h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1b4332;
-  margin-bottom: 12px;
-}
-
-.confirm-dialog p {
-  color: #6b7280;
-  margin-bottom: 24px;
-  line-height: 1.5;
-}
-
-.confirm-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
-
-.summary-row.debt-note-row {
-  border-top: 1px solid #e5e7eb;
-  margin-top: 8px;
-  padding-top: 12px;
-  font-weight: 600;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .debt-summary {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .debt-item {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .debt-item-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .debt-notice {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-.debt-overview-section {
+/* Debt Overview */
+.debt-overview-card {
   background: white;
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid #e07a5f20;
 }
 
 .debt-overview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.header-left {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1750,15 +1387,10 @@ onMounted(async () => {
   color: #1b4332;
 }
 
-.header-right {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
 .total-debt-label {
   font-size: 13px;
   color: #6b7280;
+  margin-right: 8px;
 }
 
 .total-debt-amount {
@@ -1767,23 +1399,11 @@ onMounted(async () => {
   color: #e07a5f;
 }
 
-.debt-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
 .debt-stat-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
   background: #f8f6f2;
-  border-radius: 12px;
 }
 
-.debt-stat-card .stat-icon {
+.stat-icon {
   width: 36px;
   height: 36px;
   border-radius: 10px;
@@ -1792,30 +1412,20 @@ onMounted(async () => {
   justify-content: center;
 }
 
-.debt-stat-card .stat-info {
-  flex: 1;
-}
-
-.debt-stat-card .stat-value {
+.stat-value {
   font-size: 18px;
   font-weight: 700;
   color: #1b4332;
 }
 
-.debt-stat-card .stat-label {
+.stat-label {
   font-size: 11px;
   color: #6b7280;
 }
 
-/* Debt Aging Section */
-.debt-aging-section {
+/* Aging */
+.debt-aging-card {
   background: #f8f6f2;
-  padding: 16px;
-  border-radius: 12px;
-}
-
-.aging-header {
-  margin-bottom: 12px;
 }
 
 .aging-title {
@@ -1864,84 +1474,266 @@ onMounted(async () => {
   text-align: right;
 }
 
-/* Debt Management Dialog */
-.debt-management-dialog {
-  border-radius: 32px !important;
-  overflow: hidden;
+/* Filters */
+.filters-card {
+  background: white;
+}
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  background: #f8f6f2;
+  border-radius: 40px;
+  padding: 0 16px;
+  gap: 12px;
+  height: 44px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  padding: 12px 0;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+}
+
+.search-icon {
+  color: #9ca3af;
+}
+
+.filter-group {
+  display: flex;
+  gap: 8px;
+  height: 44px;
+}
+
+.filter-select,
+.date-picker {
+  padding: 8px 12px;
+  border-radius: 40px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  outline: none;
+  width: 100%;
+  height: 44px;
+  font-size: 13px;
+}
+
+/* Stats */
+.stats-summary {
+  margin-bottom: 16px;
+}
+
+.summary-card {
+  background: white;
+  border: 1px solid #f3f4f6;
+}
+
+.summary-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1b4332;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.summary-sub {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.debt-summary {
+  border-color: #e07a5f30;
+}
+
+/* Table */
+.orders-table-card {
+  background: white;
+  border: 1px solid #f3f4f6;
+}
+
+.orders-table :deep(.v-data-table__th) {
+  background: #f8f6f2;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+}
+
+.receipt-cell {
+  font-weight: 600;
+  color: #1b4332;
+  font-family: monospace;
+}
+
+.amount-cell {
+  font-weight: 600;
+  color: #e07a5f;
+}
+
+.customer-cell .customer-name {
+  font-weight: 500;
+}
+
+.customer-cell .customer-phone {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.date-cell .date-time {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.pagination-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.items-per-page-select {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Dialogs */
+.order-details-dialog {
+  border-radius: 24px !important;
 }
 
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 24px 0 24px;
-  font-size: 20px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.receipt-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e07a5f;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.dialog-header h2 {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
   font-weight: 700;
   color: #1b4332;
+  margin: 0;
 }
 
-.title-content {
-  display: flex;
-  align-items: center;
+.info-card {
+  background: #f8f6f2;
 }
 
-.dialog-content {
-  padding: 24px;
+.info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.debt-summary-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.debt-list-section {
-  margin-top: 24px;
-}
-
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.list-title {
+.info-value {
   font-weight: 600;
   color: #1b4332;
 }
 
-.list-count {
+.debt-notice {
+  border: 1px solid #e07a5f40;
+}
+
+.debt-notice p {
+  margin: 4px 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.items-list h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1b4332;
+  margin-bottom: 12px;
+}
+
+.order-item-detail {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.item-unit-price {
   font-size: 12px;
   color: #6b7280;
 }
 
-.debt-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 400px;
-  overflow-y: auto;
+.item-detail-price {
+  font-weight: 600;
+  color: #e07a5f;
+}
+
+.order-summary {
+  background: #f8f6f2;
+}
+
+.debt-dialog {
+  border: 2px solid #e07a5f;
+}
+
+/* Debt Management Dialog */
+.debt-management-dialog {
+  border-radius: 24px !important;
+}
+
+.dialog-content {
+  padding: 16px 24px;
+}
+
+.debt-summary-cards {
+  margin-bottom: 16px;
 }
 
 .debt-list-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  background: #f8f6f2;
-  border-radius: 12px;
   border-left: 3px solid #e07a5f;
+  margin-bottom: 8px;
 }
 
 .debt-list-item.overdue {
   border-left-color: #ef4444;
   background: #fef2f2;
-}
-
-.debt-item-info {
-  flex: 1;
 }
 
 .debt-item-customer {
@@ -1955,21 +1747,13 @@ onMounted(async () => {
 }
 
 .debt-item-date {
-  font-size: 10px;
-  color: #9ca3af;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .debt-item-amount {
   font-weight: 700;
   color: #e07a5f;
-  min-width: 80px;
-}
-
-.debt-item-age {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 80px;
 }
 
 .debt-item-age span {
@@ -1982,25 +1766,13 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-.debt-btn {
-  text-transform: none;
-  border-radius: 40px;
-  background: #fff3e0;
-  color: #e07a5f;
-}
-
-.debt-btn:hover {
-  background: #ffe8cc;
-}
-
 .no-debts {
   text-align: center;
   padding: 32px;
-  color: #6b7280;
 }
 
 .no-debts p {
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: 16px;
   font-weight: 600;
   color: #1b4332;
@@ -2011,102 +1783,178 @@ onMounted(async () => {
   color: #6b7280;
 }
 
-.dialog-actions {
-  padding: 16px 24px 24px;
-  gap: 12px;
-}
-
-/* Debt Row in Table */
-.debt-row {
-  background: #fff8f0;
-  border-left: 3px solid #e07a5f;
-}
-
-.debt-row:hover {
-  background: #fff3e0;
-}
-
-.payment-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.payment-badge.cash {
-  background: #2d6a4f20;
-  color: #2d6a4f;
-}
-
-.payment-badge.mpesa {
-  background: #6b4e7120;
-  color: #6b4e71;
-}
-
-.payment-badge.debt {
-  background: #e07a5f20;
-  color: #e07a5f;
-}
-
 /* Confirm Dialog */
 .confirm-dialog {
-  text-align: center;
-  padding: 32px;
-  border-radius: 32px !important;
-}
-
-.confirm-icon {
-  margin-bottom: 20px;
-}
-
-.confirm-dialog h3 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1b4332;
-  margin-bottom: 12px;
+  border-radius: 24px !important;
 }
 
 .confirm-dialog p {
   color: #6b7280;
-  margin-bottom: 24px;
   line-height: 1.5;
 }
 
-.confirm-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
+.dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid #f3f4f6;
+  gap: 8px;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .debt-stats-grid {
-    grid-template-columns: 1fr;
+  .orders-container {
+    padding: 16px;
   }
 
-  .debt-summary-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .debt-list-item {
-    flex-wrap: wrap;
-    gap: 8px;
+  .page-title {
+    font-size: 24px;
   }
 
   .debt-overview-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .header-right {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .filter-group {
+    flex-wrap: wrap;
+    height: auto;
+    gap: 4px;
+  }
+
+  .filter-select,
+  .date-picker {
+    height: 38px;
+    font-size: 12px;
+  }
+
+  .search-wrapper {
+    height: 38px;
+    margin-bottom: 8px;
+  }
+
+  .stats-summary .v-col {
+    padding: 2px !important;
+  }
+
+  .summary-value {
+    font-size: 16px;
+  }
+
+  .summary-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .summary-icon .v-icon {
+    font-size: 18px !important;
+  }
+
+  .orders-table :deep(.v-data-table__th),
+  .orders-table :deep(.v-data-table__td) {
+    padding: 8px 12px !important;
+    font-size: 12px;
+  }
+
+  .pagination-section {
+    flex-direction: column;
     gap: 8px;
+    text-align: center;
+  }
+
+  .order-info-grid .v-col {
+    padding: 2px !important;
+  }
+
+  .debt-summary-cards .v-col {
+    padding: 2px !important;
+  }
+
+  .debt-list-item .v-col {
+    padding: 2px !important;
+  }
+
+  .dialog-actions {
+    flex-wrap: wrap;
+  }
+
+  .dialog-actions .v-btn {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .aging-item {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .aging-label {
+    min-width: 50px;
+    font-size: 11px;
+  }
+
+  .aging-amount {
+    min-width: 60px;
+    font-size: 11px;
   }
 
   .debt-item-age {
-    min-width: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .confirm-dialog {
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    font-size: 20px;
+  }
+
+  .total-debt-amount {
+    font-size: 18px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+  }
+
+  .summary-value {
+    font-size: 14px;
+  }
+
+  .debt-stat-card .stat-value {
+    font-size: 16px;
+  }
+
+  .debt-item-customer {
+    font-size: 14px;
   }
 
   .debt-item-amount {
-    min-width: auto;
+    font-size: 14px;
+  }
+
+  .orders-table :deep(.v-data-table__th),
+  .orders-table :deep(.v-data-table__td) {
+    padding: 6px 8px !important;
+    font-size: 11px;
+  }
+
+  .dialog-header h2 {
+    font-size: 18px;
+  }
+
+  .order-item-detail {
+    flex-wrap: wrap;
   }
 }
 </style>
