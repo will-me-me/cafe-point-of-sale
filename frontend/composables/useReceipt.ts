@@ -33,23 +33,46 @@ export function useReceipt() {
   const printerDevice = ref<any>(null);
   const receiptData = ref<ReceiptData | null>(null);
 
-  // Generate receipt data
+  // Helper function to safely convert to number
+  const toNumber = (value: any): number => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === "string") {
+      const parsed = parseFloat(value);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    if (typeof value === "number") return value;
+    return 0;
+  };
+
+  // Helper function to safely format currency
+  const formatCurrency = (value: any): string => {
+    const num = toNumber(value);
+    return num.toFixed(2);
+  };
+
+  // Generate receipt data - FIXED: Handle all data types
   const generateReceiptData = (orderData: any): ReceiptData => {
     const now = new Date();
+
+    // Safely map items with proper number conversion
+    const items = (orderData.items || []).map((item: any) => ({
+      name: item.name || item.product_name || "Unknown Item",
+      quantity: toNumber(item.quantity),
+      unitPrice: toNumber(item.unitPrice || item.price),
+      total: toNumber(
+        (item.unitPrice || item.price || 0) * (item.quantity || 1)
+      ),
+    }));
+
     return {
       receiptNumber: orderData.receiptNumber || `RCP-${Date.now()}`,
       orderType: orderData.orderType || "dine-in",
       customerName: orderData.customerName || "Guest",
       tableNumber: orderData.tableNumber || "N/A",
-      items: orderData.items.map((item: any) => ({
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice || item.price,
-        total: (item.unitPrice || item.price) * item.quantity,
-      })),
-      subtotal: orderData.subtotal || store.subtotal,
-      tax: orderData.tax || store.tax,
-      total: orderData.total || store.total,
+      items: items,
+      subtotal: toNumber(orderData.subtotal || store.subtotal),
+      tax: toNumber(orderData.tax || store.tax),
+      total: toNumber(orderData.total || store.total),
       paymentMode: orderData.paymentMode || "cash",
       paymentStatus: orderData.paymentStatus || "completed",
       date: now.toLocaleDateString("en-KE"),
@@ -58,8 +81,14 @@ export function useReceipt() {
         minute: "2-digit",
       }),
       cashier: orderData.cashier || "Cashier",
-      changeDue: orderData.changeDue,
-      amountReceived: orderData.amountReceived,
+      changeDue:
+        orderData.changeDue !== undefined
+          ? toNumber(orderData.changeDue)
+          : undefined,
+      amountReceived:
+        orderData.amountReceived !== undefined
+          ? toNumber(orderData.amountReceived)
+          : undefined,
       mpesaNumber: orderData.mpesaNumber,
       mpesaReceipt: orderData.mpesaReceipt,
     };
@@ -139,16 +168,16 @@ export function useReceipt() {
         encoder.text("-".repeat(32));
         data.items.forEach((item) => {
           encoder.text(
-            `${item.name} x${item.quantity} KSH ${item.unitPrice.toFixed(
-              2
-            )} = KSH ${item.total.toFixed(2)}`
+            `${item.name} x${item.quantity} KSH ${formatCurrency(
+              item.unitPrice
+            )} = KSH ${formatCurrency(item.total)}`
           );
         });
 
         encoder.text("-".repeat(32));
-        encoder.text(`Subtotal: KSH ${data.subtotal.toFixed(2)}`);
-        encoder.text(`Tax (10%): KSH ${data.tax.toFixed(2)}`);
-        encoder.text(`TOTAL: KSH ${data.total.toFixed(2)}`);
+        encoder.text(`Subtotal: KSH ${formatCurrency(data.subtotal)}`);
+        encoder.text(`Tax (10%): KSH ${formatCurrency(data.tax)}`);
+        encoder.text(`TOTAL: KSH ${formatCurrency(data.total)}`);
         encoder.newline();
 
         encoder.text(`Payment: ${data.paymentMode.toUpperCase()}`);
@@ -194,7 +223,7 @@ export function useReceipt() {
     }
   };
 
-  // Browser print fallback (works everywhere)
+  // Browser print fallback (works everywhere) - FIXED: Use formatCurrency
   const printWithBrowser = (orderData: any) => {
     try {
       const data = generateReceiptData(orderData);
@@ -220,7 +249,7 @@ export function useReceipt() {
     }
   };
 
-  // NEW: Download receipt as HTML file
+  // NEW: Download receipt as HTML file - FIXED: Use formatCurrency
   const downloadReceipt = (orderData: any) => {
     try {
       const data = generateReceiptData(orderData);
@@ -244,7 +273,7 @@ export function useReceipt() {
     }
   };
 
-  // Generate HTML receipt
+  // Generate HTML receipt - FIXED: Use formatCurrency everywhere
   const generateReceiptHTML = (data: ReceiptData): string => {
     const isDebt = data.paymentMode === "debt";
     const isMpesa = data.paymentMode === "mpesa";
@@ -255,7 +284,12 @@ export function useReceipt() {
     const hasAmountReceived = data.amountReceived != null;
     const hasChangeDue = data.changeDue != null;
     const statusClass =
-      data.paymentStatus === "completed" ? "completed" : "pending";
+      data.paymentStatus === "completed" || data.paymentStatus === "paid"
+        ? "completed"
+        : "pending";
+
+    // Format all currency values
+    const format = (val: any) => formatCurrency(val);
 
     return `
       <!DOCTYPE html>
@@ -595,11 +629,11 @@ export function useReceipt() {
               <div class="item-row">
                 <span class="item-name">${
                   item.name
-                }<span class="unit-price">KSH ${item.unitPrice.toFixed(
-                    2
+                }<span class="unit-price">KSH ${format(
+                    item.unitPrice
                   )} each</span></span>
                 <span class="item-qty">${item.quantity}</span>
-                <span class="item-amount">${item.total.toFixed(2)}</span>
+                <span class="item-amount">${format(item.total)}</span>
               </div>`
                 )
                 .join("")}
@@ -608,20 +642,18 @@ export function useReceipt() {
 
               <div class="summary-row">
                 <span class="label">Subtotal</span>
-                <span class="value">KSH ${data.subtotal.toFixed(2)}</span>
+                <span class="value">KSH ${format(data.subtotal)}</span>
               </div>
               <div class="summary-row">
                 <span class="label">Tax (10%)</span>
-                <span class="value">KSH ${data.tax.toFixed(2)}</span>
+                <span class="value">KSH ${format(data.tax)}</span>
               </div>
               ${
                 hasAmountReceived
                   ? `
               <div class="summary-row">
                 <span class="label">Amount Received</span>
-                <span class="value">KSH ${data.amountReceived!.toFixed(
-                  2
-                )}</span>
+                <span class="value">KSH ${format(data.amountReceived!)}</span>
               </div>`
                   : ""
               }
@@ -630,7 +662,7 @@ export function useReceipt() {
                   ? `
               <div class="summary-row change">
                 <span class="label">Change Due</span>
-                <span class="value">KSH ${data.changeDue!.toFixed(2)}</span>
+                <span class="value">KSH ${format(data.changeDue!)}</span>
               </div>`
                   : ""
               }
@@ -639,7 +671,7 @@ export function useReceipt() {
 
               <div class="total-row">
                 <span class="label">Total</span>
-                <span class="value">KSH ${data.total.toFixed(2)}</span>
+                <span class="value">KSH ${format(data.total)}</span>
               </div>
 
               <div class="payment-row">
@@ -702,6 +734,7 @@ export function useReceipt() {
     const data = generateReceiptData(orderData);
     const line = "=".repeat(48);
     const dash = "-".repeat(48);
+    const format = (val: any) => formatCurrency(val);
 
     let text = `
 ${line}
@@ -717,17 +750,17 @@ ${dash}
   ITEMS:
 `;
     data.items.forEach((item) => {
-      text += `  ${item.name.padEnd(20)} ${
-        item.quantity
-      } x KSH ${item.unitPrice.toFixed(2)} = KSH ${item.total.toFixed(2)}\n`;
+      text += `  ${item.name.padEnd(20)} ${item.quantity} x KSH ${format(
+        item.unitPrice
+      )} = KSH ${format(item.total)}\n`;
     });
 
     text += `
 ${dash}
-  Subtotal: KSH ${data.subtotal.toFixed(2)}
-  Tax (10%): KSH ${data.tax.toFixed(2)}
+  Subtotal: KSH ${format(data.subtotal)}
+  Tax (10%): KSH ${format(data.tax)}
 ${line}
-  TOTAL: KSH ${data.total.toFixed(2)}
+  TOTAL: KSH ${format(data.total)}
 ${line}
   Payment: ${data.paymentMode.toUpperCase()}
   Status: ${data.paymentStatus}
@@ -768,7 +801,7 @@ ${line}
     receiptData,
     connectPrinter,
     printReceipt,
-    downloadReceipt, // <-- Make sure to export this
+    downloadReceipt,
     generateReceiptData,
     generateReceiptHTML,
     generateReceiptText,
