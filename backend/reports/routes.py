@@ -31,15 +31,15 @@ async def get_daily_financial_report(
         
         # ===== CALCULATE REVENUE =====
         total_revenue = sum(o.get("total", 0) for o in orders)
-        cash_revenue = sum(o.get("total", 0) for o in orders if o.get("paymentMode") == "cash")
-        mpesa_revenue = sum(o.get("total", 0) for o in orders if o.get("paymentMode") == "mpesa")
+        cash_revenue = sum(o.get("total", 0) for o in orders if o.get("payment_mode") == "cash")
+        mpesa_revenue = sum(o.get("total", 0) for o in orders if o.get("payment_mode") == "mpesa")
         
         # Debt revenue (pending debts)
-        debt_orders = [o for o in orders if o.get("paymentMode") == "debt" and o.get("paymentStatus") == "pending"]
+        debt_orders = [o for o in orders if o.get("payment_mode") == "debt" and o.get("payment_status") == "pending"]
         debt_revenue = sum(o.get("total", 0) for o in debt_orders)
         
         # Debt cleared today
-        cleared_debts = [o for o in orders if o.get("paymentMode") == "debt" and o.get("paymentStatus") == "completed"]
+        cleared_debts = [o for o in orders if o.get("payment_mode") == "debt" and o.get("payment_status") == "completed"]
         debts_cleared_today = sum(o.get("total", 0) for o in cleared_debts)
         
         # ===== GET EXPENSES FOR THE DAY =====
@@ -57,8 +57,8 @@ async def get_daily_financial_report(
         
         # ===== GET OUTSTANDING DEBTS =====
         all_debts = await db["orders"].find({
-            "paymentMode": "debt",
-            "paymentStatus": "pending"
+            "payment_mode": "debt",
+            "payment_status": "pending"
         }).to_list(1000)
         
         total_debt_outstanding = sum(o.get("total", 0) for o in all_debts)
@@ -116,8 +116,8 @@ async def get_debt_overview(
         
         # Get all pending debts
         debts = await db["orders"].find({
-            "paymentMode": "debt",
-            "paymentStatus": "pending"
+            "payment_mode": "debt",
+            "payment_status": "pending"
         }).to_list(1000)
 
         
@@ -140,10 +140,11 @@ async def get_debt_overview(
         customers = set()
         
         for debt in debts:
+            print(debt)
             amount = debt.get("total", 0)
             debt_summary["total_debt"] += amount
             
-            customer = debt.get("customerName", "")
+            customer = debt.get("customer_name", "")
             customers.add(customer)
             
             # Calculate age
@@ -162,7 +163,7 @@ async def get_debt_overview(
             
             debt_summary["debts"].append({
                 "id": str(debt["_id"]),
-                "receiptNumber": debt.get("receiptNumber"),
+                "receiptNumber": debt.get("receipt_number"),
                 "customerName": customer,
                 "total": amount,
                 "age_days": age_days,
