@@ -2,8 +2,17 @@
 <template>
   <div class="settings-container">
     <!-- Page Header -->
-    <div class="page-header">
-      <div>
+    <v-row
+      class="page-header"
+      no-gutters
+      style="
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+      "
+    >
+      <v-col cols="12" md="8">
         <div class="page-badge">
           <v-icon size="16" color="#2D6A4F">mdi-cog</v-icon>
           System Settings
@@ -12,858 +21,756 @@
         <p class="page-subtitle">
           Configure your system preferences and settings
         </p>
-      </div>
-      <div class="header-actions">
-        <v-btn variant="outlined" color="#6B7280" @click="resetSettings">
+      </v-col>
+      <v-col cols="12" md="4" class="text-md-right mt-4 mt-md-0">
+        <v-btn
+          variant="outlined"
+          color="#6B7280"
+          @click="resetSettings"
+          :loading="saving"
+        >
           <v-icon start>mdi-restore</v-icon>
           Reset
         </v-btn>
-        <v-btn color="#2D6A4F" :loading="saving" @click="saveAllSettings">
+        <v-btn
+          color="#2D6A4F"
+          class="ml-2"
+          @click="saveAllSettings"
+          :loading="saving"
+        >
           <v-icon start>mdi-content-save</v-icon>
           Save Settings
         </v-btn>
-      </div>
-    </div>
-
-    <!-- Settings Sections -->
-    <v-row no-gutters>
-      <v-col cols="12" lg="3" class="pr-lg-4">
-        <!-- Settings Navigation -->
-        <v-card class="settings-nav-card" elevation="0" rounded="xl">
-          <v-card-text class="pa-0">
-            <v-list nav density="comfortable">
-              <v-list-item
-                v-for="section in sections"
-                :key="section.id"
-                :active="activeSection === section.id"
-                @click="activeSection = section.id"
-                class="settings-nav-item"
-              >
-                <template #prepend>
-                  <v-icon
-                    :color="
-                      activeSection === section.id ? '#2D6A4F' : '#6B7280'
-                    "
-                  >
-                    {{ section.icon }}
-                  </v-icon>
-                </template>
-                <v-list-item-title
-                  :class="activeSection === section.id ? 'active-text' : ''"
-                >
-                  {{ section.title }}
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" lg="9" class="pl-lg-4 mt-4 mt-lg-0">
-        <!-- General Settings -->
-        <div v-show="activeSection === 'general'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-store</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">Store Information</h3>
-                  <p class="section-subtitle">
-                    Basic store details and contact information
-                  </p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Store Name</label>
-                    <v-text-field
-                      v-model="settings.store.name"
-                      placeholder="Babadeacon Coffee"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Store Email</label>
-                    <v-text-field
-                      v-model="settings.store.email"
-                      placeholder="info@babadeacon.com"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <label class="form-label">Store Address</label>
-                    <v-textarea
-                      v-model="settings.store.address"
-                      placeholder="123 Coffee Street, Nairobi, Kenya"
-                      variant="outlined"
-                      rows="2"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="4">
-                  <div class="form-group">
-                    <label class="form-label">Phone Number</label>
-                    <v-text-field
-                      v-model="settings.store.phone"
-                      placeholder="+254-700-123456"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="4">
-                  <div class="form-group">
-                    <label class="form-label">Currency</label>
-                    <v-select
-                      v-model="settings.store.currency"
-                      :items="currencyOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="4">
-                  <div class="form-group">
-                    <label class="form-label">Time Zone</label>
-                    <v-select
-                      v-model="settings.store.timezone"
-                      :items="timezoneOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-              </v-row>
-
-              <v-divider class="my-6" />
-
-              <!-- Store Logo -->
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-image</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">Store Logo</h3>
-                  <p class="section-subtitle">Upload your store logo</p>
-                </div>
-              </div>
-
-              <div class="logo-upload-area" @click="triggerLogoUpload">
-                <input
-                  ref="logoInput"
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  @change="handleLogoUpload"
-                />
-                <div v-if="settings.store.logo" class="logo-preview">
-                  <img :src="settings.store.logo" alt="Store Logo" />
-                  <div class="logo-overlay">
-                    <v-icon size="24">mdi-camera</v-icon>
-                    <span>Change Logo</span>
-                  </div>
-                </div>
-                <div v-else class="logo-placeholder">
-                  <v-icon size="48" color="#9CA3AF">mdi-image-plus</v-icon>
-                  <p>Click to upload store logo</p>
-                  <span>PNG, JPG up to 2MB</span>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- POS Settings -->
-        <div v-show="activeSection === 'pos'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-cash-register</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">POS Settings</h3>
-                  <p class="section-subtitle">
-                    Configure your Point of Sale preferences
-                  </p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Default Order Type</label>
-                    <v-select
-                      v-model="settings.pos.default_order_type"
-                      :items="orderTypeOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Default Payment Method</label>
-                    <v-select
-                      v-model="settings.pos.default_payment"
-                      :items="paymentMethodOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Tax Rate (%)</label>
-                    <v-text-field
-                      v-model="settings.pos.tax_rate"
-                      placeholder="10"
-                      type="number"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Receipt Footer</label>
-                    <v-text-field
-                      v-model="settings.pos.receipt_footer"
-                      placeholder="Thank you for your order!"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.pos.auto_print_receipt"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Auto-print Receipt</div>
-                          <div class="switch-hint">
-                            Automatically print receipt after placing order
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.pos.require_customer"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Require Customer Name</div>
-                          <div class="switch-hint">
-                            Prompt for customer name before checkout
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.pos.allow_debt"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Allow Debt Orders</div>
-                          <div class="switch-hint">
-                            Enable 'Pay Later' option at checkout
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- Product Settings -->
-        <div v-show="activeSection === 'products'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-package-variant</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">Product Settings</h3>
-                  <p class="section-subtitle">
-                    Configure product and inventory preferences
-                  </p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Default Reorder Level</label>
-                    <v-text-field
-                      v-model="settings.products.default_reorder"
-                      placeholder="10"
-                      type="number"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Low Stock Alert Threshold</label>
-                    <v-text-field
-                      v-model="settings.products.low_stock_threshold"
-                      placeholder="5"
-                      type="number"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.products.enable_variants"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Enable Variants</div>
-                          <div class="switch-hint">
-                            Allow products to have multiple variants (sizes,
-                            colors, etc.)
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.products.track_inventory"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Track Inventory</div>
-                          <div class="switch-hint">
-                            Monitor stock levels for all products
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.products.require_barcode"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Require Barcode</div>
-                          <div class="switch-hint">
-                            Make barcode mandatory for all products
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- Payment Settings -->
-        <div v-show="activeSection === 'payments'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-credit-card</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">Payment Settings</h3>
-                  <p class="section-subtitle">
-                    Configure payment methods and options
-                  </p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12">
-                  <div class="form-group">
-                    <label class="form-label">Accepted Payment Methods</label>
-                    <div class="payment-methods-grid">
-                      <div
-                        v-for="method in paymentMethods"
-                        :key="method.id"
-                        class="payment-method-item"
-                      >
-                        <v-checkbox
-                          v-model="method.enabled"
-                          :label="method.name"
-                          :color="method.enabled ? '#2D6A4F' : '#6B7280'"
-                          hide-details
-                        />
-                        <v-icon :color="method.enabled ? '#2D6A4F' : '#6B7280'">
-                          {{ method.icon }}
-                        </v-icon>
-                      </div>
-                    </div>
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">M-Pesa Paybill Number</label>
-                    <v-text-field
-                      v-model="settings.payments.mpesa_paybill"
-                      placeholder="123456"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">M-Pesa Account Number</label>
-                    <v-text-field
-                      v-model="settings.payments.mpesa_account"
-                      placeholder="Store Account"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.payments.allow_partial_payment"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Allow Partial Payments</div>
-                          <div class="switch-hint">
-                            Customers can pay partially and settle later
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- Receipt Settings -->
-        <div v-show="activeSection === 'receipt'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-receipt</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">Receipt Settings</h3>
-                  <p class="section-subtitle">Customize your receipts</p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12">
-                  <div class="form-group">
-                    <label class="form-label">Receipt Header</label>
-                    <v-textarea
-                      v-model="settings.receipt.header"
-                      placeholder="☕ BABADEACON COFFEE"
-                      variant="outlined"
-                      rows="2"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <label class="form-label">Receipt Footer</label>
-                    <v-textarea
-                      v-model="settings.receipt.footer"
-                      placeholder="Thank you for your order!\nVisit us again at Babadeacon Coffee"
-                      variant="outlined"
-                      rows="2"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Receipt Paper Width (mm)</label>
-                    <v-select
-                      v-model="settings.receipt.paper_width"
-                      :items="paperWidthOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Receipt Font Size</label>
-                    <v-select
-                      v-model="settings.receipt.font_size"
-                      :items="fontSizeOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.receipt.show_tax_breakdown"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Show Tax Breakdown</div>
-                          <div class="switch-hint">
-                            Display tax calculation on receipts
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.receipt.show_item_discounts"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Show Item Discounts</div>
-                          <div class="switch-hint">
-                            Display discount per item on receipts
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- Printer Settings -->
-        <div v-show="activeSection === 'printer'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-printer</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">Printer Settings</h3>
-                  <p class="section-subtitle">Configure receipt printer</p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12">
-                  <div class="form-group">
-                    <label class="form-label">Printer Connection Type</label>
-                    <v-select
-                      v-model="settings.printer.connection_type"
-                      :items="connectionTypeOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col
-                  cols="12"
-                  md="6"
-                  v-if="settings.printer.connection_type === 'bluetooth'"
-                >
-                  <div class="form-group">
-                    <label class="form-label">Bluetooth Device</label>
-                    <v-select
-                      v-model="settings.printer.bluetooth_device"
-                      :items="bluetoothDevices"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                    <v-btn
-                      variant="text"
-                      size="small"
-                      color="#2D6A4F"
-                      class="mt-2"
-                      @click="scanBluetoothDevices"
-                    >
-                      <v-icon size="16">mdi-bluetooth</v-icon>
-                      Scan for Devices
-                    </v-btn>
-                  </div>
-                </v-col>
-
-                <v-col
-                  cols="12"
-                  md="6"
-                  v-if="settings.printer.connection_type === 'usb'"
-                >
-                  <div class="form-group">
-                    <label class="form-label">USB Device</label>
-                    <v-select
-                      v-model="settings.printer.usb_device"
-                      :items="usbDevices"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col
-                  cols="12"
-                  md="6"
-                  v-if="settings.printer.connection_type === 'network'"
-                >
-                  <div class="form-group">
-                    <label class="form-label">Printer IP Address</label>
-                    <v-text-field
-                      v-model="settings.printer.ip_address"
-                      placeholder="192.168.1.100"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col
-                  cols="12"
-                  md="6"
-                  v-if="settings.printer.connection_type === 'network'"
-                >
-                  <div class="form-group">
-                    <label class="form-label">Printer Port</label>
-                    <v-text-field
-                      v-model="settings.printer.port"
-                      placeholder="9100"
-                      type="number"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <v-btn
-                    color="#2D6A4F"
-                    variant="outlined"
-                    @click="testPrinterConnection"
-                  >
-                    <v-icon start>mdi-printer-check</v-icon>
-                    Test Printer Connection
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
-
-        <!-- System Settings -->
-        <div v-show="activeSection === 'system'">
-          <v-card class="settings-card" elevation="0" rounded="xl">
-            <v-card-text class="pa-4 pa-md-6">
-              <div class="section-header">
-                <div class="section-icon">
-                  <v-icon color="#2D6A4F">mdi-server</v-icon>
-                </div>
-                <div>
-                  <h3 class="section-title">System Settings</h3>
-                  <p class="section-subtitle">Advanced system configuration</p>
-                </div>
-              </div>
-
-              <v-row>
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Backup Frequency</label>
-                    <v-select
-                      v-model="settings.system.backup_frequency"
-                      :items="backupFrequencyOptions"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12" md="6">
-                  <div class="form-group">
-                    <label class="form-label">Log Retention (days)</label>
-                    <v-text-field
-                      v-model="settings.system.log_retention"
-                      placeholder="30"
-                      type="number"
-                      variant="outlined"
-                      density="comfortable"
-                      hide-details="auto"
-                    />
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.system.auto_backup"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Auto Backup</div>
-                          <div class="switch-hint">
-                            Automatically backup data daily
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-
-                  <div class="form-group">
-                    <v-switch
-                      v-model="settings.system.debug_mode"
-                      color="#2D6A4F"
-                      hide-details
-                    >
-                      <template #label>
-                        <div>
-                          <div class="switch-label">Debug Mode</div>
-                          <div class="switch-hint">
-                            Enable detailed error logging
-                          </div>
-                        </div>
-                      </template>
-                    </v-switch>
-                  </div>
-                </v-col>
-
-                <v-col cols="12">
-                  <v-divider class="my-4" />
-                  <div class="danger-zone">
-                    <h4 class="danger-title">Danger Zone</h4>
-                    <p class="danger-subtitle">
-                      Destructive actions that cannot be undone
-                    </p>
-                    <div class="danger-actions">
-                      <v-btn
-                        color="#E07A5F"
-                        variant="outlined"
-                        @click="clearCache"
-                      >
-                        <v-icon start>mdi-broom</v-icon>
-                        Clear Cache
-                      </v-btn>
-                      <v-btn
-                        color="#E07A5F"
-                        variant="outlined"
-                        @click="resetAllSettings"
-                      >
-                        <v-icon start>mdi-restore</v-icon>
-                        Reset All Settings
-                      </v-btn>
-                      <v-btn
-                        color="#E07A5F"
-                        variant="outlined"
-                        @click="confirmDataReset"
-                      >
-                        <v-icon start>mdi-delete</v-icon>
-                        Reset All Data
-                      </v-btn>
-                    </div>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </div>
       </v-col>
     </v-row>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center pa-8">
+      <v-progress-circular indeterminate color="#2D6A4F" size="48" />
+      <p class="mt-4 text-medium-emphasis">Loading settings...</p>
+    </div>
+
+    <!-- Settings Content -->
+    <div v-else>
+      <v-row no-gutters>
+        <v-col cols="12" lg="3" class="pr-lg-4">
+          <!-- Settings Navigation -->
+          <v-card class="settings-nav-card" elevation="0" rounded="xl">
+            <v-card-text class="pa-0">
+              <v-list dense nav>
+                <v-list-item
+                  v-for="section in sections"
+                  :key="section.id"
+                  :active="activeSection === section.id"
+                  @click="activeSection = section.id"
+                  class="settings-nav-item"
+                >
+                  <template #prepend>
+                    <v-icon
+                      :color="
+                        activeSection === section.id ? '#2D6A4F' : '#6B7280'
+                      "
+                    >
+                      {{ section.icon }}
+                    </v-icon>
+                  </template>
+                  <v-list-item-title
+                    :class="activeSection === section.id ? 'active-text' : ''"
+                  >
+                    {{ section.title }}
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-col>
+
+        <v-col cols="12" lg="9" class="pl-lg-4 mt-4 mt-lg-0">
+          <!-- Store Settings -->
+          <div v-show="activeSection === 'general'">
+            <v-card class="settings-card" elevation="0" rounded="xl">
+              <v-card-text class="pa-4 pa-md-6">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-store</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">Store Information</h3>
+                    <p class="section-subtitle">
+                      Basic store details and contact information
+                    </p>
+                  </div>
+                </div>
+
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Store Name</label>
+                      <v-text-field
+                        v-model="settings.store.name"
+                        placeholder="Babadeacon Coffee"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Store Email</label>
+                      <v-text-field
+                        v-model="settings.store.email"
+                        placeholder="info@babadeacon.com"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <label class="form-label">Store Address</label>
+                      <v-textarea
+                        v-model="settings.store.address"
+                        placeholder="123 Coffee Street, Nairobi, Kenya"
+                        variant="outlined"
+                        rows="2"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="4">
+                    <div class="form-group">
+                      <label class="form-label">Phone Number</label>
+                      <v-text-field
+                        v-model="settings.store.phone"
+                        placeholder="+254-700-123456"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="4">
+                    <div class="form-group">
+                      <label class="form-label">Currency</label>
+                      <v-select
+                        v-model="settings.store.currency"
+                        :items="currencyOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="4">
+                    <div class="form-group">
+                      <label class="form-label">Time Zone</label>
+                      <v-select
+                        v-model="settings.store.timezone"
+                        :items="timezoneOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+                </v-row>
+
+                <v-divider class="my-6" />
+
+                <!-- Store Logo -->
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-image</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">Store Logo</h3>
+                    <p class="section-subtitle">Upload your store logo</p>
+                  </div>
+                </div>
+
+                <div class="logo-upload-area" @click="triggerLogoUpload">
+                  <input
+                    ref="logoInput"
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    @change="handleLogoUpload"
+                  />
+                  <div v-if="settings.store.logo" class="logo-preview">
+                    <img :src="settings.store.logo" alt="Store Logo" />
+                    <div class="logo-overlay">
+                      <v-icon size="24">mdi-camera</v-icon>
+                      <span>Change Logo</span>
+                    </div>
+                  </div>
+                  <div v-else class="logo-placeholder">
+                    <v-icon size="48" color="#9CA3AF">mdi-image-plus</v-icon>
+                    <p>Click to upload store logo</p>
+                    <span>PNG, JPG up to 2MB</span>
+                  </div>
+                </div>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- POS Settings -->
+          <div v-show="activeSection === 'pos'">
+            <v-card class="settings-card" elevation="0" rounded="xl">
+              <v-card-text class="pa-4 pa-md-6">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-cash-register</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">POS Settings</h3>
+                    <p class="section-subtitle">
+                      Configure your Point of Sale preferences
+                    </p>
+                  </div>
+                </div>
+
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Default Order Type</label>
+                      <v-select
+                        v-model="settings.pos.default_order_type"
+                        :items="orderTypeOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Default Payment Method</label>
+                      <v-select
+                        v-model="settings.pos.default_payment"
+                        :items="paymentMethodOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Tax Rate (%)</label>
+                      <v-text-field
+                        v-model="settings.pos.tax_rate"
+                        placeholder="10"
+                        type="number"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Receipt Footer</label>
+                      <v-text-field
+                        v-model="settings.pos.receipt_footer"
+                        placeholder="Thank you for your order!"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.pos.auto_print_receipt"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">Auto-print Receipt</div>
+                            <div class="switch-hint">
+                              Automatically print receipt after placing order
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.pos.require_customer"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">
+                              Require Customer Name
+                            </div>
+                            <div class="switch-hint">
+                              Prompt for customer name before checkout
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.pos.allow_debt"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">Allow Debt Orders</div>
+                            <div class="switch-hint">
+                              Enable 'Pay Later' option at checkout
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- Payment Settings -->
+          <div v-show="activeSection === 'payments'">
+            <v-card class="settings-card" elevation="0" rounded="xl">
+              <v-card-text class="pa-4 pa-md-6">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-credit-card</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">Payment Settings</h3>
+                    <p class="section-subtitle">
+                      Configure payment methods and options
+                    </p>
+                  </div>
+                </div>
+
+                <v-row>
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <label class="form-label">Accepted Payment Methods</label>
+                      <div class="payment-methods-grid">
+                        <div
+                          v-for="method in settings.payments.payment_methods"
+                          :key="method.id"
+                          class="payment-method-item"
+                        >
+                          <v-checkbox
+                            v-model="method.enabled"
+                            :label="method.name"
+                            :color="method.enabled ? '#2D6A4F' : '#6B7280'"
+                            hide-details
+                          />
+                          <v-icon
+                            :color="method.enabled ? '#2D6A4F' : '#6B7280'"
+                          >
+                            {{ method.icon }}
+                          </v-icon>
+                        </div>
+                      </div>
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">M-Pesa Paybill Number</label>
+                      <v-text-field
+                        v-model="settings.payments.mpesa_paybill"
+                        placeholder="123456"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">M-Pesa Account Number</label>
+                      <v-text-field
+                        v-model="settings.payments.mpesa_account"
+                        placeholder="Store Account"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.payments.allow_partial_payment"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">
+                              Allow Partial Payments
+                            </div>
+                            <div class="switch-hint">
+                              Customers can pay partially and settle later
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- Receipt Settings -->
+          <div v-show="activeSection === 'receipt'">
+            <v-card class="settings-card" elevation="0" rounded="xl">
+              <v-card-text class="pa-4 pa-md-6">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-receipt</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">Receipt Settings</h3>
+                    <p class="section-subtitle">Customize your receipts</p>
+                  </div>
+                </div>
+
+                <v-row>
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <label class="form-label">Receipt Header</label>
+                      <v-textarea
+                        v-model="settings.receipt.header"
+                        placeholder="☕ BABADEACON COFFEE"
+                        variant="outlined"
+                        rows="2"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <label class="form-label">Receipt Footer</label>
+                      <v-textarea
+                        v-model="settings.receipt.footer"
+                        placeholder="Thank you for your order!\nVisit us again at Babadeacon Coffee"
+                        variant="outlined"
+                        rows="2"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Receipt Paper Width (mm)</label>
+                      <v-select
+                        v-model="settings.receipt.paper_width"
+                        :items="paperWidthOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Receipt Font Size</label>
+                      <v-select
+                        v-model="settings.receipt.font_size"
+                        :items="fontSizeOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.receipt.show_tax_breakdown"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">Show Tax Breakdown</div>
+                            <div class="switch-hint">
+                              Display tax calculation on receipts
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.receipt.show_item_discounts"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">Show Item Discounts</div>
+                            <div class="switch-hint">
+                              Display discount per item on receipts
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- Printer Settings -->
+          <div v-show="activeSection === 'printer'">
+            <v-card class="settings-card" elevation="0" rounded="xl">
+              <v-card-text class="pa-4 pa-md-6">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-printer</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">Printer Settings</h3>
+                    <p class="section-subtitle">Configure receipt printer</p>
+                  </div>
+                </div>
+
+                <v-row>
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <label class="form-label">Printer Connection Type</label>
+                      <v-select
+                        v-model="settings.printer.connection_type"
+                        :items="connectionTypeOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    md="6"
+                    v-if="settings.printer.connection_type === 'bluetooth'"
+                  >
+                    <div class="form-group">
+                      <label class="form-label">Bluetooth Device</label>
+                      <v-select
+                        v-model="settings.printer.bluetooth_device"
+                        :items="bluetoothDevices"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                      <v-btn
+                        variant="text"
+                        size="small"
+                        color="#2D6A4F"
+                        class="mt-2"
+                        @click="scanBluetoothDevices"
+                      >
+                        <v-icon size="16">mdi-bluetooth</v-icon>
+                        Scan for Devices
+                      </v-btn>
+                    </div>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    md="6"
+                    v-if="settings.printer.connection_type === 'network'"
+                  >
+                    <div class="form-group">
+                      <label class="form-label">Printer IP Address</label>
+                      <v-text-field
+                        v-model="settings.printer.ip_address"
+                        placeholder="192.168.1.100"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col
+                    cols="12"
+                    md="6"
+                    v-if="settings.printer.connection_type === 'network'"
+                  >
+                    <div class="form-group">
+                      <label class="form-label">Printer Port</label>
+                      <v-text-field
+                        v-model="settings.printer.port"
+                        placeholder="9100"
+                        type="number"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <v-btn
+                      color="#2D6A4F"
+                      variant="outlined"
+                      @click="testPrinterConnection"
+                    >
+                      <v-icon start>mdi-printer-check</v-icon>
+                      Test Printer Connection
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+
+          <!-- System Settings -->
+          <div v-show="activeSection === 'system'">
+            <v-card class="settings-card" elevation="0" rounded="xl">
+              <v-card-text class="pa-4 pa-md-6">
+                <div class="section-header">
+                  <div class="section-icon">
+                    <v-icon color="#2D6A4F">mdi-server</v-icon>
+                  </div>
+                  <div>
+                    <h3 class="section-title">System Settings</h3>
+                    <p class="section-subtitle">
+                      Advanced system configuration
+                    </p>
+                  </div>
+                </div>
+
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Backup Frequency</label>
+                      <v-select
+                        v-model="settings.system.backup_frequency"
+                        :items="backupFrequencyOptions"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div class="form-group">
+                      <label class="form-label">Log Retention (days)</label>
+                      <v-text-field
+                        v-model="settings.system.log_retention"
+                        placeholder="30"
+                        type="number"
+                        variant="outlined"
+                        density="comfortable"
+                        hide-details="auto"
+                      />
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.system.auto_backup"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">Auto Backup</div>
+                            <div class="switch-hint">
+                              Automatically backup data daily
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+
+                    <div class="form-group">
+                      <v-switch
+                        v-model="settings.system.debug_mode"
+                        color="#2D6A4F"
+                        hide-details
+                      >
+                        <template #label>
+                          <div>
+                            <div class="switch-label">Debug Mode</div>
+                            <div class="switch-hint">
+                              Enable detailed error logging
+                            </div>
+                          </div>
+                        </template>
+                      </v-switch>
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12">
+                    <v-divider class="my-4" />
+                    <div class="danger-zone">
+                      <h4 class="danger-title">Danger Zone</h4>
+                      <p class="danger-subtitle">
+                        Destructive actions that cannot be undone
+                      </p>
+                      <div class="danger-actions">
+                        <v-btn
+                          color="#E07A5F"
+                          variant="outlined"
+                          @click="confirmAction('clearCache')"
+                        >
+                          <v-icon start>mdi-broom</v-icon>
+                          Clear Cache
+                        </v-btn>
+                        <v-btn
+                          color="#E07A5F"
+                          variant="outlined"
+                          @click="confirmAction('resetSettings')"
+                        >
+                          <v-icon start>mdi-restore</v-icon>
+                          Reset All Settings
+                        </v-btn>
+                      </div>
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </div>
+        </v-col>
+      </v-row>
+    </div>
 
     <!-- Confirmation Dialog -->
     <v-dialog v-model="confirmDialog.show" max-width="400">
@@ -877,7 +784,13 @@
           <v-btn variant="text" @click="confirmDialog.show = false"
             >Cancel</v-btn
           >
-          <v-btn color="#E07A5F" @click="confirmDialog.action"> Confirm </v-btn>
+          <v-btn
+            color="#E07A5F"
+            :loading="confirmDialog.loading"
+            @click="executeConfirmAction"
+          >
+            Confirm
+          </v-btn>
         </div>
       </v-card>
     </v-dialog>
@@ -889,6 +802,7 @@
       :color="snackbar.color"
       location="top"
     >
+      <v-icon start>{{ snackbar.icon }}</v-icon>
       {{ snackbar.text }}
       <template v-slot:actions>
         <v-btn variant="text" icon="mdi-close" @click="snackbar.show = false" />
@@ -898,90 +812,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
+import { useSettingsStore } from "~/stores/settings";
 
 definePageMeta({
   layout: "default",
   middleware: "auth",
 });
 
+const settingsStore = useSettingsStore();
+
 // State
 const activeSection = ref("general");
+const loading = ref(true);
 const saving = ref(false);
 const logoInput = ref(null);
-const snackbar = ref({
-  show: false,
-  text: "",
-  color: "success",
-});
 
 const confirmDialog = ref({
   show: false,
   title: "",
   message: "",
-  action: () => {},
+  action: "",
+  loading: false,
+});
+
+const snackbar = ref({
+  show: false,
+  text: "",
+  color: "success",
+  icon: "mdi-check-circle",
 });
 
 // Settings Data
-const settings = reactive({
-  store: {
-    name: "Babadeacon Coffee",
-    email: "info@babadeacon.com",
-    address: "123 Coffee Street, Nairobi, Kenya",
-    phone: "+254-700-123456",
-    currency: "KES",
-    timezone: "Africa/Nairobi",
-    logo: "",
-  },
-  pos: {
-    default_order_type: "takeaway",
-    default_payment: "cash",
-    tax_rate: 10,
-    receipt_footer: "Thank you for your order!",
-    auto_print_receipt: true,
-    require_customer: false,
-    allow_debt: true,
-  },
-  products: {
-    default_reorder: 10,
-    low_stock_threshold: 5,
-    enable_variants: true,
-    track_inventory: true,
-    require_barcode: false,
-  },
-  payments: {
-    mpesa_paybill: "",
-    mpesa_account: "",
-    allow_partial_payment: false,
-  },
-  receipt: {
-    header: "☕ BABADEACON COFFEE\nPremium Coffee & Snacks",
-    footer: "Thank you for your order!\nVisit us again at Babadeacon Coffee",
-    paper_width: "80",
-    font_size: "12",
-    show_tax_breakdown: true,
-    show_item_discounts: true,
-  },
-  printer: {
-    connection_type: "bluetooth",
-    bluetooth_device: "",
-    usb_device: "",
-    ip_address: "",
-    port: "9100",
-  },
-  system: {
-    backup_frequency: "daily",
-    log_retention: 30,
-    auto_backup: true,
-    debug_mode: false,
-  },
-});
+const settings = computed(() => settingsStore.settings || getDefaultSettings());
 
 // Options
 const sections = [
   { id: "general", title: "General", icon: "mdi-store" },
   { id: "pos", title: "POS Settings", icon: "mdi-cash-register" },
-  { id: "products", title: "Product Settings", icon: "mdi-package-variant" },
   { id: "payments", title: "Payment Settings", icon: "mdi-credit-card" },
   { id: "receipt", title: "Receipt Settings", icon: "mdi-receipt" },
   { id: "printer", title: "Printer Settings", icon: "mdi-printer" },
@@ -1016,13 +884,6 @@ const paymentMethodOptions = [
   { title: "Debt", value: "debt" },
 ];
 
-const paymentMethods = ref([
-  { id: "cash", name: "Cash", icon: "mdi-cash", enabled: true },
-  { id: "mpesa", name: "M-Pesa", icon: "mdi-cellphone", enabled: true },
-  { id: "card", name: "Card", icon: "mdi-credit-card", enabled: false },
-  { id: "debt", name: "Debt", icon: "mdi-account-cash", enabled: true },
-]);
-
 const paperWidthOptions = [
   { title: "58mm", value: "58" },
   { title: "80mm", value: "80" },
@@ -1049,22 +910,95 @@ const backupFrequencyOptions = [
 ];
 
 const bluetoothDevices = ref([]);
-const usbDevices = ref([]);
+
+// Default Settings
+function getDefaultSettings() {
+  return {
+    store: {
+      name: "Babadeacon Coffee",
+      email: "info@babadeacon.com",
+      address: "123 Coffee Street, Nairobi, Kenya",
+      phone: "+254-700-123456",
+      currency: "KES",
+      timezone: "Africa/Nairobi",
+      logo: null,
+    },
+    pos: {
+      default_order_type: "takeaway",
+      default_payment: "cash",
+      tax_rate: 10,
+      receipt_footer: "Thank you for your order!",
+      auto_print_receipt: true,
+      require_customer: false,
+      allow_debt: true,
+    },
+    products: {
+      default_reorder: 10,
+      low_stock_threshold: 5,
+      enable_variants: true,
+      track_inventory: true,
+      require_barcode: false,
+    },
+    payments: {
+      payment_methods: [
+        { id: "cash", name: "Cash", icon: "mdi-cash", enabled: true },
+        { id: "mpesa", name: "M-Pesa", icon: "mdi-cellphone", enabled: true },
+        { id: "card", name: "Card", icon: "mdi-credit-card", enabled: false },
+        { id: "debt", name: "Debt", icon: "mdi-account-cash", enabled: true },
+      ],
+      mpesa_paybill: null,
+      mpesa_account: null,
+      allow_partial_payment: false,
+    },
+    receipt: {
+      header: "☕ BABADEACON COFFEE\nPremium Coffee & Snacks",
+      footer: "Thank you for your order!\nVisit us again at Babadeacon Coffee",
+      paper_width: "80",
+      font_size: "12",
+      show_tax_breakdown: true,
+      show_item_discounts: true,
+    },
+    printer: {
+      connection_type: "bluetooth",
+      bluetooth_device: null,
+      usb_device: null,
+      ip_address: null,
+      port: "9100",
+    },
+    system: {
+      backup_frequency: "daily",
+      log_retention: 30,
+      auto_backup: true,
+      debug_mode: false,
+    },
+  };
+}
 
 // Methods
 const triggerLogoUpload = () => {
   logoInput.value?.click();
 };
 
-const handleLogoUpload = (event: Event) => {
+const handleLogoUpload = async (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      settings.store.logo = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const result = await settingsStore.uploadLogo(file);
+      snackbar.value = {
+        show: true,
+        text: "Logo uploaded successfully!",
+        color: "success",
+        icon: "mdi-check-circle",
+      };
+    } catch (error) {
+      snackbar.value = {
+        show: true,
+        text: "Failed to upload logo",
+        color: "error",
+        icon: "mdi-alert-circle",
+      };
+    }
   }
 };
 
@@ -1074,6 +1008,7 @@ const scanBluetoothDevices = () => {
       show: true,
       text: "Bluetooth is not supported on this browser",
       color: "error",
+      icon: "mdi-alert-circle",
     };
     return;
   }
@@ -1089,11 +1024,12 @@ const scanBluetoothDevices = () => {
           title: device.name,
           value: device.id,
         });
-        settings.printer.bluetooth_device = device.id;
+        settings.value.printer.bluetooth_device = device.id;
         snackbar.value = {
           show: true,
           text: `Connected to ${device.name}`,
           color: "success",
+          icon: "mdi-bluetooth",
         };
       }
     })
@@ -1103,6 +1039,7 @@ const scanBluetoothDevices = () => {
         show: true,
         text: "Failed to scan for Bluetooth devices",
         color: "error",
+        icon: "mdi-alert-circle",
       };
     });
 };
@@ -1112,6 +1049,7 @@ const testPrinterConnection = () => {
     show: true,
     text: "Testing printer connection...",
     color: "info",
+    icon: "mdi-printer",
   };
 
   setTimeout(() => {
@@ -1119,6 +1057,7 @@ const testPrinterConnection = () => {
       show: true,
       text: "✅ Printer connected successfully!",
       color: "success",
+      icon: "mdi-check-circle",
     };
   }, 2000);
 };
@@ -1126,107 +1065,110 @@ const testPrinterConnection = () => {
 const saveAllSettings = async () => {
   saving.value = true;
   try {
-    // TODO: API Call to save settings
-    // await $fetch('/api/v1/settings', {
-    //   method: 'POST',
-    //   body: settings,
-    // });
-
-    console.log("Saving settings:", settings);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
+    await settingsStore.saveSettings(settings.value);
     snackbar.value = {
       show: true,
       text: "All settings saved successfully!",
       color: "success",
+      icon: "mdi-check-circle",
     };
   } catch (error) {
-    console.error("Error saving settings:", error);
     snackbar.value = {
       show: true,
       text: "Failed to save settings",
       color: "error",
+      icon: "mdi-alert-circle",
     };
   } finally {
     saving.value = false;
   }
 };
 
-const resetSettings = () => {
+const resetSettings = async () => {
   confirmDialog.value = {
     show: true,
     title: "Reset Settings?",
     message:
       "This will reset all settings to their default values. This action cannot be undone.",
-    action: () => {
-      // Reset settings to defaults
-      // TODO: Implement reset logic
-      confirmDialog.value.show = false;
+    action: "resetSettings",
+    loading: false,
+  };
+};
+
+const confirmAction = (action: string) => {
+  const actions: Record<string, { title: string; message: string }> = {
+    clearCache: {
+      title: "Clear Cache?",
+      message:
+        "This will clear all local cache data. Your settings will not be affected.",
+    },
+    resetSettings: {
+      title: "Reset All Settings?",
+      message:
+        "This will reset ALL settings to factory defaults. This action cannot be undone.",
+    },
+  };
+
+  const data = actions[action];
+  if (data) {
+    confirmDialog.value = {
+      show: true,
+      title: data.title,
+      message: data.message,
+      action: action,
+      loading: false,
+    };
+  }
+};
+
+const executeConfirmAction = async () => {
+  confirmDialog.value.loading = true;
+  try {
+    if (confirmDialog.value.action === "clearCache") {
+      localStorage.clear();
+      sessionStorage.clear();
+      snackbar.value = {
+        show: true,
+        text: "Cache cleared successfully!",
+        color: "success",
+        icon: "mdi-check-circle",
+      };
+    } else if (confirmDialog.value.action === "resetSettings") {
+      await settingsStore.resetSettings();
       snackbar.value = {
         show: true,
         text: "Settings have been reset to default values",
         color: "success",
+        icon: "mdi-check-circle",
       };
-    },
-  };
+    }
+    confirmDialog.value.show = false;
+  } catch (error) {
+    snackbar.value = {
+      show: true,
+      text: "Action failed. Please try again.",
+      color: "error",
+      icon: "mdi-alert-circle",
+    };
+  } finally {
+    confirmDialog.value.loading = false;
+  }
 };
 
-const resetAllSettings = () => {
-  confirmDialog.value = {
-    show: true,
-    title: "Reset All Settings?",
-    message:
-      "This will reset ALL settings to factory defaults. This action cannot be undone.",
-    action: () => {
-      // TODO: Implement full reset
-      confirmDialog.value.show = false;
-      snackbar.value = {
-        show: true,
-        text: "All settings have been reset to factory defaults",
-        color: "success",
-      };
-    },
-  };
-};
-
-const confirmDataReset = () => {
-  confirmDialog.value = {
-    show: true,
-    title: "⚠️ Reset All Data?",
-    message:
-      "This will permanently delete ALL data including products, orders, and customers. This action CANNOT be undone. Are you sure?",
-    action: () => {
-      // TODO: Implement data reset
-      confirmDialog.value.show = false;
-      snackbar.value = {
-        show: true,
-        text: "All data has been reset. Please restart the system.",
-        color: "error",
-      };
-    },
-  };
-};
-
-const clearCache = () => {
-  localStorage.clear();
-  sessionStorage.clear();
-  snackbar.value = {
-    show: true,
-    text: "Cache cleared successfully!",
-    color: "success",
-  };
-};
-
-// Load settings on mount
+// Lifecycle
 onMounted(async () => {
   try {
-    // TODO: Fetch settings from API
-    // const response = await $fetch('/api/v1/settings');
-    // Object.assign(settings, response);
-    console.log("Settings loaded");
+    await settingsStore.fetchSettings();
   } catch (error) {
     console.error("Error loading settings:", error);
+    snackbar.value = {
+      show: true,
+      text: "Failed to load settings",
+      color: "error",
+      icon: "mdi-alert-circle",
+    };
+  } finally {
+    loading.value = false;
   }
 });
 </script>
