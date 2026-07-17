@@ -236,7 +236,7 @@
         v-if="authStore.isAuthenticated"
       >
         <v-app-bar-nav-icon @click="drawer = !drawer" />
-        <v-app-bar-title>Babadeacon Cafe POS</v-app-bar-title>
+        <v-app-bar-title>{{ settingsStore?.storeName }}</v-app-bar-title>
         <v-spacer />
         <div class="user-info">
           <span class="user-role-badge">{{ authStore.userRole }}</span>
@@ -255,8 +255,11 @@
 </template>
 
 <script setup lang="ts">
+import { useSettingsStore } from "~/stores/settings";
+
 const drawer = ref(true);
 const authStore = useAuthStore();
+const settingsStore = useSettingsStore();
 </script>
 
 <style scoped>
