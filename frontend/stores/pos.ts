@@ -195,195 +195,8 @@ export const usePosStore = defineStore("pos", {
       const authStore = useAuthStore();
 
       try {
-        // Build the base product object
-        const product: any = {
-          name: productData.name,
-          description: productData.description || "",
-          short_description: productData.short_description || "",
-          sku: productData.sku,
-          barcode: productData.barcode || "",
-          product_type: productData.product_type || "stock",
-          category_id: productData.category_id || null,
-          brand_id: productData.brand_id || null,
-          manufacturer_id: productData.manufacturer_id || null,
-
-          // Suppliers
-          suppliers: productData.suppliers || [],
-
-          // Attributes and specifications
-          attributes: productData.attributes || {},
-          specifications: productData.specifications || {},
-
-          // Inventory
-          inventory: {
-            quantity: productData.quantity || 0,
-            reserved: productData.reserved || 0,
-            min_stock: productData.min_stock || null,
-            max_stock: productData.max_stock || null,
-            reorder_level: productData.reorder_level || 10,
-            location: productData.location || "",
-            shelf_number: productData.shelf_number || "",
-            status: productData.status || "in_stock",
-          },
-
-          // Pricing
-          pricing: {
-            cost_price: productData.cost_price || 0,
-            selling_price: productData.selling_price || 0,
-            price_tiers: {
-              retail:
-                productData.retail_price || productData.selling_price || 0,
-              wholesale: productData.wholesale_price || null,
-              dealer: productData.dealer_price || null,
-              vip: productData.vip_price || null,
-              member: productData.member_price || null,
-            },
-            is_taxable:
-              productData.is_taxable !== undefined
-                ? productData.is_taxable
-                : true,
-          },
-
-          // Variants
-          has_variants: productData.has_variants || false,
-          variants: productData.variants
-            ? productData.variants.map((variant: any) => ({
-                sku: variant.sku,
-                barcode: variant.barcode || "",
-                variant_name: variant.variant_name,
-                attributes: variant.attributes || {},
-                is_active:
-                  variant.is_active !== undefined ? variant.is_active : true,
-                is_default: variant.is_default || false,
-                sort_order: variant.sort_order || 0,
-                pricing: variant.pricing
-                  ? {
-                      selling_price: variant.pricing.selling_price || 0,
-                      cost_price: variant.pricing.cost_price || null,
-                      price_tiers: variant.pricing.price_tiers || null,
-                    }
-                  : null,
-                inventory: variant.inventory
-                  ? {
-                      quantity: variant.inventory.quantity || 0,
-                      reserved: variant.inventory.reserved || 0,
-                      reorder_level: variant.inventory.reorder_level || 5,
-                    }
-                  : null,
-              }))
-            : [],
-
-          // Additional info
-          weight: productData.weight || null,
-          length: productData.length || null,
-          width: productData.width || null,
-          height: productData.height || null,
-          volume: productData.volume || null,
-          unit_of_measure: productData.unit_of_measure || "piece",
-          minimum_order: productData.minimum_order || 1,
-          maximum_order: productData.maximum_order || null,
-
-          // Status
-          is_active:
-            productData.is_active !== undefined ? productData.is_active : true,
-          is_featured: productData.is_featured || false,
-          is_new: productData.is_new || false,
-          is_on_sale: productData.is_on_sale || false,
-          is_rental: productData.is_rental || false,
-          is_digital: productData.is_digital || false,
-          is_service: productData.is_service || false,
-          is_composite: productData.is_composite || false,
-
-          // Tags
-          tags: productData.tags || [],
-
-          // Media
-          media: productData.media
-            ? {
-                images: productData.media.images || [],
-                videos: productData.media.videos || [],
-                documents: productData.media.documents || [],
-              }
-            : null,
-
-          // SEO
-          seo_title: productData.seo_title || null,
-          seo_description: productData.seo_description || null,
-          seo_keywords: productData.seo_keywords || null,
-
-          // Tax
-          tax_id: productData.tax_id || null,
-          is_taxable:
-            productData.is_taxable !== undefined
-              ? productData.is_taxable
-              : true,
-
-          // Warranty
-          warranty: productData.warranty
-            ? {
-                months: productData.warranty.months || 0,
-                provider: productData.warranty.provider || "manufacturer",
-                provider_name: productData.warranty.provider_name || null,
-                terms: productData.warranty.terms || null,
-                is_transferable: productData.warranty.is_transferable || false,
-                registration_required:
-                  productData.warranty.registration_required || false,
-                registration_url: productData.warranty.registration_url || null,
-                is_active:
-                  productData.warranty.is_active !== undefined
-                    ? productData.warranty.is_active
-                    : true,
-              }
-            : null,
-
-          // Expiry
-          expiry: productData.expiry
-            ? {
-                days_valid: productData.expiry.days_valid || null,
-                months_valid: productData.expiry.months_valid || null,
-                years_valid: productData.expiry.years_valid || null,
-                require_expiry: productData.expiry.require_expiry || false,
-                alert_days_before: productData.expiry.alert_days_before || 30,
-                alert_days_after: productData.expiry.alert_days_after || 7,
-                allow_sale_after_expiry:
-                  productData.expiry.allow_sale_after_expiry || false,
-                notes: productData.expiry.notes || null,
-              }
-            : null,
-
-          // Batch tracking
-          track_batches: productData.track_batches || false,
-          track_serial_numbers: productData.track_serial_numbers || false,
-
-          // Purchase and sales info
-          purchase_unit: productData.purchase_unit || null,
-          selling_unit: productData.selling_unit || null,
-
-          // Unit conversion - Only add if provided
-          unit_conversion: productData.unit_conversion
-            ? {
-                purchase_unit: productData.unit_conversion.purchase_unit,
-                selling_unit: productData.unit_conversion.selling_unit,
-                conversion_factor:
-                  productData.unit_conversion.conversion_factor,
-              }
-            : undefined,
-
-          // Notes
-          notes: productData.notes || "",
-        };
-
-        // Remove undefined properties to avoid validation errors
-        Object.keys(product).forEach((key) => {
-          if (product[key] === undefined) {
-            delete product[key];
-          }
-        });
-
-        console.log(
-          "📤 Sending product data:",
-          JSON.stringify(product, null, 2)
-        );
+        console.log("📤 Sending to backend");
+        console.log(JSON.stringify(productData, null, 2));
 
         const response = await fetch("http://127.0.0.1:8000/products/", {
           method: "POST",
@@ -391,25 +204,30 @@ export const usePosStore = defineStore("pos", {
             "Content-Type": "application/json",
             Authorization: `Bearer ${authStore.token}`,
           },
-          body: JSON.stringify(product),
+          body: JSON.stringify(productData),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error("❌ Product creation failed:", errorText);
-          throw new Error(
-            `HTTP error! status: ${response.status} - ${errorText}`
-          );
+
+          console.error("❌ Backend Error");
+          console.error(errorText);
+
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        const data = await response.json();
-        console.log("✅ Product created successfully:", data);
+        const product = await response.json();
+
+        console.log("✅ Product created");
+        console.log(product);
 
         await this.getAllProducts();
-        return data;
-      } catch (error) {
-        console.error("❌ Error creating product:", error);
-        throw error;
+
+        return product;
+      } catch (err) {
+        console.error("❌ addProduct()");
+        console.error(err);
+        throw err;
       }
     },
 
@@ -452,6 +270,71 @@ export const usePosStore = defineStore("pos", {
       } catch (error) {
         console.error("❌ Error adding brand:", error);
         throw error;
+      }
+    },
+
+    // Get single product by ID
+    async getProductById(id: string) {
+      try {
+        // const authStore = useAuthStore();
+
+        const response = await fetch(`http://127.0.0.1:8000/products/${id}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            // Authorization: `Bearer ${authStore.token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const product = await response.json();
+
+        console.log("✅ Product loaded", product);
+
+        return product;
+      } catch (err) {
+        console.error("❌ getProductById()", err);
+        throw err;
+      }
+    },
+    // Update product
+    async updateProduct(id: string, productData: any) {
+      const authStore = useAuthStore();
+
+      try {
+        console.log("📤 Updating product");
+        console.log(JSON.stringify(productData, null, 2));
+
+        const response = await fetch(`http://127.0.0.1:8000/products/${id}`, {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authStore.token}`,
+          },
+          body: JSON.stringify(productData),
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          console.error("❌ Update failed:", error);
+          throw new Error(error);
+        }
+
+        const updated = await response.json();
+
+        console.log("✅ Product updated", updated);
+
+        // Refresh cached list
+        await this.getAllProducts();
+
+        return updated;
+      } catch (err) {
+        console.error("❌ updateProduct()", err);
+        throw err;
       }
     },
 
