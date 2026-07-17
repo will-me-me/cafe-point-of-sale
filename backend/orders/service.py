@@ -165,14 +165,27 @@ async def validate_and_prepare_order(order_data: OrderCreate) -> OrderCreate:
             item.barcode = variant.get('barcode', product.barcode)
             
             # Check variant inventory
-            variant_inventory = variant.get('inventory', {})
-            available_stock = variant_inventory.get('available', 0) if variant_inventory else 0
-            
-            if available_stock < item.quantity:
+            available_stock = product.inventory.available if product.inventory else 0
+
+            # Determine how much stock this variant represents
+            required_stock = float(item.quantity)
+
+            attributes = variant.get("attributes", {})
+
+            if "weight_kg" in attributes:
+                required_stock *= float(attributes["weight_kg"])
+
+            elif "weight_litre" in attributes:
+                required_stock *= float(attributes["weight_litre"])
+
+            if available_stock < required_stock:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Insufficient stock for {item.product_name}. "
-                           f"Available: {available_stock}, Required: {item.quantity}"
+                    detail=(
+                        f"Insufficient stock for {item.product_name}. "
+                        f"Available: {available_stock}, "
+                        f"Required: {required_stock}"
+                    )
                 )
         else:
             # Simple product without variants
