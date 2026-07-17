@@ -35,20 +35,21 @@ class SerialNumber(BaseModel):
     notes: Optional[str] = None
 
 class StockLevel(BaseModel):
-    minimum: int = Field(default=0, ge=0)
-    maximum: Optional[int] = Field(None, ge=0)
-    reorder_point: int = Field(default=0, ge=0)
-    reorder_quantity: int = Field(default=0, ge=0)
+    minimum: Decimal = Field(default=Decimal("0"), ge=0)
+    maximum: Optional[Decimal] = Field(None, ge=0)
+    reorder_point: Decimal = Field(default=Decimal("0"), ge=0)
+    reorder_quantity: Decimal = Field(default=Decimal("0"), ge=0)
 
 class InventoryBase(BaseModel):
     product_id: Optional[str] = None  # Made optional
     variant_id: Optional[str] = None
-    quantity: int = Field(..., ge=0)
-    reserved: int = Field(default=0, ge=0)
-    available: Optional[int] = Field(None, ge=0)  # Made optional
-    min_stock: Optional[int] = Field(None, ge=0)
-    max_stock: Optional[int] = Field(None, ge=0)
-    reorder_level: int = Field(default=0, ge=0)
+    quantity: Decimal = Field(default=Decimal("0"), ge=0)
+    reserved: Decimal = Field(default=Decimal("0"), ge=0)
+    available: Optional[Decimal] = Field(None, ge=0)
+
+    min_stock: Optional[Decimal] = Field(None, ge=0)
+    max_stock: Optional[Decimal] = Field(None, ge=0)
+    reorder_level: Decimal = Field(default=Decimal("0"), ge=0)
     location: Optional[str] = None
     shelf_number: Optional[str] = None
     batch_details: Optional[BatchDetails] = None
@@ -79,11 +80,11 @@ class InventoryCreate(InventoryBase):
     pass
 
 class InventoryUpdate(BaseModel):
-    quantity: Optional[int] = Field(None, ge=0)
-    reserved: Optional[int] = Field(None, ge=0)
-    min_stock: Optional[int] = Field(None, ge=0)
-    max_stock: Optional[int] = Field(None, ge=0)
-    reorder_level: Optional[int] = Field(None, ge=0)
+    quantity: Optional[Decimal] = Field(None, ge=0)
+    reserved: Optional[Decimal] = Field(None, ge=0)
+    min_stock: Optional[Decimal] = Field(None, ge=0)
+    max_stock: Optional[Decimal] = Field(None, ge=0)
+    reorder_level: Optional[Decimal] = Field(None, ge=0)
     location: Optional[str] = None
     shelf_number: Optional[str] = None
     batch_details: Optional[BatchDetails] = None
