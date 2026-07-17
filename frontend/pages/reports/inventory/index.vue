@@ -227,7 +227,7 @@
 
               <template v-slot:item.total_value="{ item }">
                 KSh
-                {{ getStock(item) * (item.pricing?.cost_price || 0) }}
+                {{ getInventoryValue(item).toLocaleString() }}
               </template>
 
               <template v-slot:item.status="{ item }">
@@ -288,6 +288,20 @@ const headers = [
 // Computed
 const products = computed(() => store.products || []);
 
+const getInventoryValue = (item: any) => {
+  const stock = Number(
+    item.inventory?.available ?? item.inventory?.quantity ?? 0
+  );
+
+  const costPrice = Number(item.pricing?.cost_price || 0);
+
+  if (item.unit_conversion?.conversion_factor) {
+    return stock * (costPrice / Number(item.unit_conversion.conversion_factor));
+  }
+
+  return stock * costPrice;
+};
+
 const getStock = (item: any) => {
   return item.inventory?.available || item.inventory?.quantity || 0;
 };
@@ -300,13 +314,9 @@ const getStockPercentage = (item: any) => {
 
 const totalProducts = computed(() => products.value.length);
 
-const inventoryValue = computed(() => {
-  return products.value.reduce((sum, item) => {
-    const stock = getStock(item);
-    const cost = item.pricing?.cost_price || 0;
-    return sum + stock * cost;
-  }, 0);
-});
+const inventoryValue = computed(() =>
+  products.value.reduce((sum, item) => sum + getInventoryValue(item), 0)
+);
 
 const lowStockCount = computed(() => {
   return products.value.filter((item) => {
