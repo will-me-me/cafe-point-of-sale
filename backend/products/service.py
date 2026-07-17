@@ -389,6 +389,7 @@ class ProductService:
         
         cursor = self.collection.find(query).sort("created_at", -1).skip(skip).limit(limit)
         products = await cursor.to_list(length=limit)
+        # print(f"Fetched {len(products)} products with query: {query}")
 
         result = []
         for product in products:
@@ -427,43 +428,88 @@ class ProductService:
             else:
                 return float(weight_str)
         
-    async def update_product(self, product_id: str, product_data: ProductUpdate, user_id: str) -> Optional[Product]:
-        """Update a product"""
-        update_data = product_data.dict(exclude_unset=True)
-        update_data["updated_at"] = dt.datetime.utcnow()
-        update_data["updated_by"] = user_id
-        
-        # Handle nested updates
-        if "inventory" in update_data:
-            update_data["inventory.updated_at"] = dt.datetime.utcnow()
-            # Calculate status if quantity changed
-            if "quantity" in update_data["inventory"]:
-                update_data["inventory.status"] = self._determine_stock_status(
-                    update_data["inventory"]["quantity"]
-                )
-        
-        if "pricing" in update_data:
-            update_data["pricing.updated_at"] = dt.datetime.utcnow()
-            # Calculate margin if prices changed
-            cost = update_data["pricing"].get("cost_price")
-            selling = update_data["pricing"].get("selling_price")
-            if cost is not None and selling is not None:
-                if cost > 0 and selling > 0:
-                    update_data["pricing.margin"] = ((selling - cost) / selling) * 100
-                else:
-                    update_data["pricing.margin"] = 0
-        
-        # Convert Decimal to float
-        update_data = convert_decimal_to_float(update_data)
-        
-        result = await self.collection.update_one(
-            {"_id": ObjectId(product_id)},
-            {"$set": update_data}
-        )
-        
-        if result.modified_count:
+    async def update_product(
+            self,
+            product_id: str,
+            product_data: ProductUpdate,
+            user_id: str
+        ) -> Optional[Product]:
+            """Update product"""
+
+            update_data = product_data.model_dump(
+                exclude_unset=True,
+                exclude_none=True
+            )
+
+            update_data["updated_at"] = dt.datetime.utcnow()
+            update_data["updated_by"] = user_id
+
+            # ----------------------------
+            # Inventory
+            # ----------------------------
+            if "inventory" in update_data:
+
+                inventory = update_data["inventory"]
+
+                inventory["updated_at"] = dt.datetime.utcnow()
+
+                quantity = inventory.get("quantity")
+
+                if quantity is not None:
+                    inventory["status"] = self._determine_stock_status(quantity)
+
+                    reserved = inventory.get("reserved", 0)
+
+                    inventory["available"] = max(
+                        0,
+                        float(quantity) - float(reserved)
+                    )
+
+                update_data["inventory"] = inventory
+
+            # ----------------------------
+            # Pricing
+            # ----------------------------
+            if "pricing" in update_data:
+
+                pricing = update_data["pricing"]
+
+                pricing["updated_at"] = dt.datetime.utcnow()
+
+                cost = pricing.get("cost_price")
+                selling = pricing.get("selling_price")
+
+                if cost is not None and selling is not None:
+
+                    cost = float(cost)
+                    selling = float(selling)
+
+                    if cost > 0 and selling > 0:
+                        pricing["margin"] = (
+                            (selling - cost) / selling
+                        ) * 100
+
+                        pricing["markup"] = (
+                            (selling - cost) / cost
+                        ) * 100
+
+                    else:
+                        pricing["margin"] = 0
+                        pricing["markup"] = 0
+
+                update_data["pricing"] = pricing
+
+            update_data = convert_decimal_to_float(update_data)
+
+            result = await self.collection.update_one(
+                {"_id": ObjectId(product_id)},
+                {"$set": update_data}
+            )
+
+            if result.modified_count == 0:
+                return None
+
             return await self.get_product(product_id)
-        return None
     
     async def delete_product(self, product_id: str) -> bool:
         """Soft delete a product (mark as inactive)"""
@@ -539,76 +585,129 @@ class ProductService:
     # ============ INVENTORY MANAGEMENT ============
     
     async def update_inventory(
-        self, 
-        product_id: str, 
-        quantity_change: float,  # Changed to float for kg
-        movement_type: MovementType,
-        reason: str,
-        user_id: str,
-        reference_id: Optional[str] = None,
-        variant_id: Optional[str] = None,
-        branch_id: Optional[str] = None,
-        serial_numbers: Optional[List[str]] = None,
-        batch_number: Optional[str] = None
-    ) -> InventoryMovement:
-        """Update inventory quantity in kg and create movement record"""
-        
-        # Get current product
-        product = await self.get_product(product_id)
-        if not product:
-            raise HTTPException(status_code=404, detail="Product not found")
-        
-        # If variant is specified, get its weight
-        if variant_id:
-            variant = next((v for v in product.variants if v.get('id') == variant_id), None)
-            if variant:
-                weight_kg = variant.get('attributes', {}).get('weight_kg', 0)
-                # Convert quantity from number of units to kg
-                quantity_kg = quantity_change * weight_kg
-            else:
-                quantity_kg = quantity_change
-        else:
-            quantity_kg = quantity_change
-        
-        # Get current quantity in kg
-        current_quantity = product.inventory.quantity if product.inventory else 0
-        new_quantity = max(0, current_quantity + quantity_kg)
-        
-        # Prepare update
-        update_data = {
-            "updated_at": dt.datetime.utcnow(),
-            "updated_by": user_id,
-            "inventory.quantity": new_quantity,
-            "inventory.available": new_quantity - 0,
-            "inventory.status": self._determine_stock_status(new_quantity),
-            "inventory.updated_at": dt.datetime.utcnow()
-        }
-        
-        # Update product inventory
-        result = await self.collection.update_one(
-            {"_id": ObjectId(product_id)},
-            {"$set": update_data}
-        )
-        
-        if not result.modified_count:
-            raise HTTPException(status_code=500, detail="Failed to update inventory")
-        
-        # Create inventory movement record
-        movement = await self.create_movement(
-            product_id=product_id,
-            variant_id=variant_id,
-            quantity=abs(quantity_kg),
-            movement_type=movement_type,
-            reason=reason,
-            user_id=user_id,
-            reference_id=reference_id,
-            branch_id=branch_id,
-            serial_numbers=serial_numbers,
-            batch_number=batch_number,
-            unit_cost=product.pricing.cost_price / product.unit_conversion.conversion_factor if product.pricing and product.unit_conversion else None
-        )
-        
-        return movement
+            self,
+            product_id: str,
+            quantity_change: float,
+            movement_type: MovementType,
+            reason: str,
+            user_id: str,
+            reference_id: Optional[str] = None,
+            variant_id: Optional[str] = None,
+            branch_id: Optional[str] = None,
+            serial_numbers: Optional[List[str]] = None,
+            batch_number: Optional[str] = None
+        ) -> InventoryMovement:
+            """
+            Updates inventory for both:
+                - Normal products (pieces)
+                - Bulk products (kg/litres)
+
+            quantity_change should already be the REAL quantity to deduct.
+
+            Examples
+            --------
+            Tissue:
+                quantity_change = -3
+
+            Rice:
+                quantity_change = -2.5 kg
+
+            Sugar:
+                quantity_change = -4 kg
+            """
+
+            product = await self.get_product(product_id)
+
+            if not product:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Product not found"
+                )
+
+            # ---------------------------------------------------
+            # Current quantity
+            # ---------------------------------------------------
+            current_qty = Decimal(
+                str(product.inventory.quantity if product.inventory else 0)
+            )
+
+            qty_change = Decimal(str(quantity_change))
+
+            new_qty = current_qty + qty_change
+
+            if new_qty < Decimal("0"):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient stock. Available: {current_qty}"
+                )
+
+            # ---------------------------------------------------
+            # Decide if this product stores decimals
+            # ---------------------------------------------------
+            inventory_quantity = (
+                float(new_qty)
+                if product.unit_conversion
+                else int(new_qty)
+            )
+
+            update_data = {
+                "updated_at": dt.datetime.utcnow(),
+                "updated_by": user_id,
+
+                "inventory.quantity": inventory_quantity,
+                "inventory.available": inventory_quantity,
+                "inventory.status": self._determine_stock_status(inventory_quantity),
+                "inventory.updated_at": dt.datetime.utcnow(),
+            }
+
+            result = await self.collection.update_one(
+                {"_id": ObjectId(product_id)},
+                {"$set": update_data}
+            )
+
+            if result.modified_count == 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to update inventory"
+                )
+
+            # ---------------------------------------------------
+            # Unit Cost
+            # ---------------------------------------------------
+            unit_cost = None
+
+            if product.pricing:
+                if product.unit_conversion:
+                    conversion = Decimal(
+                        str(product.unit_conversion.conversion_factor)
+                    )
+
+                    unit_cost = (
+                        Decimal(str(product.pricing.cost_price))
+                        / conversion
+                    )
+
+                else:
+                    unit_cost = Decimal(str(product.pricing.cost_price))
+
+            # ---------------------------------------------------
+            # Inventory movement
+            # ---------------------------------------------------
+            movement = await self.create_movement(
+                product_id=product_id,
+                variant_id=variant_id,
+                quantity=float(abs(qty_change)),
+                movement_type=movement_type,
+                reason=reason,
+                user_id=user_id,
+                reference_id=reference_id,
+                branch_id=branch_id,
+                serial_numbers=serial_numbers,
+                batch_number=batch_number,
+                unit_cost=float(unit_cost) if unit_cost is not None else None
+            )
+
+            return movement
     
     def _determine_stock_status(self, quantity: int) -> str:
         """Determine stock status based on quantity"""
