@@ -228,7 +228,7 @@
             >
               <template v-slot:item.receiptNumber="{ item }">
                 <span class="order-number font-weight-medium">
-                  #{{ item.receiptNumber || item.id?.slice(-6) }}
+                  #{{ item.receipt_number || item.id?.slice(-6) }}
                 </span>
               </template>
 
